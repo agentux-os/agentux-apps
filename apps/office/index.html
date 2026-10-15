@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AgentUX Office</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">AGENTUX / OFFICE</p>
+          <h1>Acme Robotics <span>· command floor</span></h1>
+          <p class="subtle">Remote read-only projection · definition v3 · updated just now</p>
+        </div>
+        <div class="connection"><i></i> Command projection healthy</div>
+      </header>
+
+      <section class="metrics" aria-label="Executive overview">
+        <article class="metric-card"><span>Active work</span><strong id="metric-active">0</strong><small>runs in motion</small></article>
+        <article class="metric-card warning"><span>Blocked</span><strong id="metric-blocked">0</strong><small>needs attention</small></article>
+        <article class="metric-card approval"><span>Approvals</span><strong id="metric-approvals">0</strong><small>human decisions</small></article>
+        <article class="metric-card"><span>Healthy nodes</span><strong id="metric-nodes">0/0</strong><small>registered capacity</small></article>
+      </section>
+
+      <section class="controls" aria-label="Office filters">
+        <label>Area <select id="area-filter"><option value="all">All areas</option></select></label>
+        <label>Mission <select id="mission-filter"><option value="all">All missions</option></select></label>
+        <label>Status <select id="status-filter"><option value="all">All statuses</option><option value="active">Active</option><option value="blocked">Blocked</option><option value="waiting">Waiting approval</option><option value="complete">Complete</option></select></label>
+        <button id="clear-filters" type="button">Clear filters</button>
+      </section>
+
+      <section class="workspace">
+        <div class="floor-panel">
+          <div class="panel-heading"><div><p class="eyebrow">LIVE FLOOR</p><h2>People, agents and nodes</h2></div><span class="legend"><i class="active-dot"></i> active <i class="blocked-dot"></i> blocked</span></div>
+          <div id="office-grid" class="office-grid" aria-live="polite"></div>
+        </div>
+        <aside class="events-panel">
+          <div class="panel-heading"><div><p class="eyebrow">EVENT STREAM</p><h2>What is happening</h2></div><span class="live-pill">LIVE</span></div>
+          <ol id="event-list" class="event-list"></ol>
+        </aside>
+      </section>
+      <footer><span>Office is a read-only projection.</span><span>Control actions require Command permissions.</span></footer>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

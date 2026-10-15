@@ -26,5 +26,14 @@ Office is a visualization and interaction surface, not an execution engine. The 
 
 ## Status
 
-Architecture scaffold. The first implementation will validate read-only aggregation from multiple AgentUX nodes before adding remote dispatch or intervention.
+Office MVP is available at [`apps/office`](apps/office): it renders a fake
+Command event stream, an office-style 2D floor, executive metrics and filters
+for area, mission and status. It is intentionally remote/read-only; the next
+step is replacing the fixture adapter with the Command projection API.
+
+```sh
+npm test
+npm run serve
+# open http://127.0.0.1:4173
+```
 
