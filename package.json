@@ -1,0 +1,10 @@
+{
+  "name": "@agentux/apps",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "test": "node scripts/validate-office.mjs",
+    "serve": "node scripts/serve-office.mjs"
+  }
+}
