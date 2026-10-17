@@ -4,10 +4,10 @@ const html = await readFile(new URL('../apps/office/index.html', import.meta.url
 const script = await readFile(new URL('../apps/office/app.js', import.meta.url), 'utf8');
 const css = await readFile(new URL('../apps/office/styles.css', import.meta.url), 'utf8');
 
-for (const marker of ['office-grid', 'area-filter', 'mission-filter', 'status-filter', 'event-list']) {
+for (const marker of ['office-grid', 'area-filter', 'mission-filter', 'status-filter', 'event-list', 'approval-list']) {
   if (!html.includes(marker)) throw new Error(`missing Office surface: ${marker}`);
 }
-for (const marker of ['fixtureProjection', 'renderOffice', 'matches', 'createCommandApi']) {
+for (const marker of ['fixtureProjection', 'renderOffice', 'matches', 'createCommandApi', 'resolveApproval']) {
   if (!script.includes(marker)) throw new Error(`missing Office behavior: ${marker}`);
 }
 for (const marker of ['.office-grid', '.desk', '.metric-card', '.event-item']) {

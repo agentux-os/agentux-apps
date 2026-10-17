@@ -23,6 +23,7 @@ const fixtureProjection = {
 
 let projection = fixtureProjection;
 let people = [];
+let runtimeApi;
 
 function apiForRuntime() { return config.commandUrl ? createCommandApi({ baseUrl: config.commandUrl, token: config.token }) : createFixtureApi({ projection: fixtureProjection }); }
 function normalizePeople(value) { return [...(value.agents || []), ...(value.nodes || [])].map((item, index) => ({ ...item, icon: item.icon || item.name?.slice(-2) || String(index + 1) })); }
@@ -43,11 +44,19 @@ function renderOffice() {
   $('metric-approvals').textContent = (projection.approvals || []).filter((item) => item.status === 'pending').length + people.filter((item) => item.status === 'waiting').length;
   const nodes = people.filter((item) => item.kind?.startsWith('Node')); $('metric-nodes').textContent = `${nodes.filter((item) => item.status !== 'blocked').length}/${nodes.length}`;
   $('event-list').innerHTML = (projection.events || []).filter(matches).map((event) => `<li class="event-item ${event.eventType || event.type}"><span class="event-time">${event.occurredAt || event.at || ''}</span><div><strong>${event.message || event.eventType}</strong><small>${event.actor || 'Command'} · ${event.area || 'Organization'}</small></div></li>`).join('') || '<li class="empty">No events match these filters.</li>';
+  const approvals = (projection.approvals || []).filter((approval) => approval.status === 'pending');
+  $('approval-list').innerHTML = approvals.length ? approvals.map((approval) => `<article class="approval-card"><div><strong>${approval.action || 'Decision required'}</strong><small>${approval.runId || 'Run'} · expires ${approval.expiresAt || 'not specified'}</small></div><div class="approval-actions"><button data-approval="${approval.id}" data-decision="approved">Approve</button><button data-approval="${approval.id}" data-decision="rejected">Reject</button></div></article>`).join('') : '<p class="empty">No pending approvals.</p>';
+  for (const button of document.querySelectorAll('[data-approval]')) button.addEventListener('click', async () => {
+    button.disabled = true;
+    const result = await runtimeApi.resolveApproval(button.dataset.approval, { decision: button.dataset.decision, idempotencyKey: `office-${button.dataset.approval}-${button.dataset.decision}` });
+    button.parentElement.previousElementSibling.querySelector('small').textContent = result.ok ? `Decision recorded: ${result.decision.decision}` : `${result.conflict.code}: ${result.conflict.message}`;
+  });
   $('connection-status').textContent = `${projection.source} · ${projection.freshness} · ${projection.lastEventId}`;
 }
 
 async function boot() {
-  const result = await apiForRuntime().loadProjection({ organizationId: config.organizationId || 'org-demo' });
+  runtimeApi = apiForRuntime();
+  const result = await runtimeApi.loadProjection({ organizationId: config.organizationId || 'org-demo' });
   if (result.projection) projection = result.projection;
   if (!result.projection) $('connection-status').textContent = `Command unavailable · ${result.error || 'retry required'}`;
   people = normalizePeople(projection); setupFilters(); renderOffice();
