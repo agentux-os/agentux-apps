@@ -43,10 +43,18 @@ Office is a visualization and interaction surface, not an execution engine. The 
 
 ## Status
 
-Office MVP is available at [`apps/office`](apps/office): it renders a fake
-Command event stream, an office-style 2D floor, executive metrics and filters
-for area, mission and status. It is intentionally remote/read-only; the next
-step is replacing the fixture adapter with the Command projection API.
+Office MVP is available at [`apps/office`](apps/office). It uses a typed
+`CommandApi` adapter for the remote projection and keeps a deterministic
+`FixtureApi` for demos without a server. Runtime configuration is supplied by
+`window.AGENTUX_OFFICE_CONFIG` (for example `{ commandUrl, token,
+organizationId }`); credentials are never embedded in the source.
+
+The adapter preserves the distributed contract's `organizationId`,
+`definitionVersion`, `projectedAt`, `freshness`, `source` and `lastEventId`.
+It distinguishes ready, stale, empty, degraded and error states, and keeps
+approval conflicts typed instead of converting a failed mutation into success.
+Operational drill-down is tracked in [#5](https://github.com/agentux-os/agentux-apps/issues/5);
+accessibility and reliability hardening in [#6](https://github.com/agentux-os/agentux-apps/issues/6).
 
 ```sh
 npm test

@@ -14,7 +14,7 @@
           <h1>Acme Robotics <span>· command floor</span></h1>
           <p class="subtle">Remote read-only projection · definition v3 · updated just now</p>
         </div>
-        <div class="connection"><i></i> Command projection healthy</div>
+        <div class="connection"><i></i> <span id="connection-status">fixture · loading</span></div>
       </header>
 
       <section class="metrics" aria-label="Executive overview">
@@ -29,6 +29,11 @@
         <label>Mission <select id="mission-filter"><option value="all">All missions</option></select></label>
         <label>Status <select id="status-filter"><option value="all">All statuses</option><option value="active">Active</option><option value="blocked">Blocked</option><option value="waiting">Waiting approval</option><option value="complete">Complete</option></select></label>
         <button id="clear-filters" type="button">Clear filters</button>
+      </section>
+
+      <section class="approvals-panel" aria-labelledby="approvals-title">
+        <div class="panel-heading"><div><p class="eyebrow">DECISION QUEUE</p><h2 id="approvals-title">Pending approvals</h2></div><span class="subtle">Command-authoritative</span></div>
+        <div id="approval-list" class="approval-list" aria-live="polite"></div>
       </section>
 
       <section class="workspace">
