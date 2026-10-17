@@ -25,7 +25,7 @@ let projection = fixtureProjection;
 let people = [];
 let runtimeApi;
 
-function apiForRuntime() { return config.commandUrl ? createCommandApi({ baseUrl: config.commandUrl, token: config.token }) : createFixtureApi({ projection: fixtureProjection }); }
+function apiForRuntime() { return config.commandUrl ? createCommandApi({ baseUrl: config.commandUrl, token: config.token, organizationId: config.organizationId }) : createFixtureApi({ projection: fixtureProjection }); }
 function normalizePeople(value) { return [...(value.agents || []), ...(value.nodes || [])].map((item, index) => ({ ...item, icon: item.icon || item.name?.slice(-2) || String(index + 1) })); }
 function matches(item) { return (filters.area === 'all' || item.area === filters.area) && (filters.mission === 'all' || item.mission === filters.mission) && (filters.status === 'all' || item.status === filters.status); }
 

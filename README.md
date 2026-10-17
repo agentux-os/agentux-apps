@@ -53,6 +53,9 @@ The adapter preserves the distributed contract's `organizationId`,
 `definitionVersion`, `projectedAt`, `freshness`, `source` and `lastEventId`.
 It distinguishes ready, stale, empty, degraded and error states, and keeps
 approval conflicts typed instead of converting a failed mutation into success.
+Approval submissions include the configured `organizationId`, so Command can
+scope idempotent retries to the organization and approval. Keep this identifier
+aligned with the authenticated session when production sessions are enabled.
 Operational drill-down is tracked in [#5](https://github.com/agentux-os/agentux-apps/issues/5);
 accessibility and reliability hardening in [#6](https://github.com/agentux-os/agentux-apps/issues/6).
 

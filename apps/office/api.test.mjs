@@ -30,6 +30,17 @@ test('CommandApi preserves typed authorization and approval conflicts', async ()
   assert.equal(result.conflict.code, 'already_decided');
 });
 
+test('CommandApi scopes approval idempotency to the configured organization', async () => {
+  const api = createCommandApi({ organizationId: 'org-tenant-1', baseUrl: 'http://command.test', token: 'secret', fetchImpl: async (_url, options) => {
+    const request = JSON.parse(options.body);
+    assert.equal(request.organizationId, 'org-tenant-1');
+    return new Response(JSON.stringify({ ok: true, organizationId: 'org-tenant-1', approvalId: 'approval-01', decision: request.decision, idempotencyKey: request.idempotencyKey }), { status: 200 });
+  }});
+  const result = await api.resolveApproval('approval-01', { decision: 'approved', idempotencyKey: 'idem-tenant-1' });
+  assert.equal(result.ok, true);
+  assert.equal(result.decision.organizationId, 'org-tenant-1');
+});
+
 test('FixtureApi has the same adapter surface and explicit empty state', async () => {
   const api = createFixtureApi({ projection: { ...projection, freshness: 'stale', areas: [], missions: [], agents: [], nodes: [], runs: [], approvals: [], artifacts: [] } });
   assert.equal((await api.loadProjection({})).status, 'stale');
