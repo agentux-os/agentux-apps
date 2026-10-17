@@ -7,11 +7,18 @@ const css = await readFile(new URL('../apps/office/styles.css', import.meta.url)
 for (const marker of ['office-grid', 'area-filter', 'mission-filter', 'status-filter', 'event-list']) {
   if (!html.includes(marker)) throw new Error(`missing Office surface: ${marker}`);
 }
-for (const marker of ['fakeEvents', 'renderOffice', 'matches', 'approval']) {
+for (const marker of ['fixtureProjection', 'renderOffice', 'matches', 'createCommandApi']) {
   if (!script.includes(marker)) throw new Error(`missing Office behavior: ${marker}`);
 }
 for (const marker of ['.office-grid', '.desk', '.metric-card', '.event-item']) {
   if (!css.includes(marker)) throw new Error(`missing Office style: ${marker}`);
 }
+
+for (const marker of ['createCommandApi', 'createFixtureApi', 'loadProjection', 'resolveApproval']) {
+  const api = await readFile(new URL('../apps/office/api.js', import.meta.url), 'utf8');
+  if (!api.includes(marker)) throw new Error(`missing Office API adapter: ${marker}`);
+}
+
+await import('../apps/office/api.test.mjs');
 
 console.log('validated Office HTML, filtering, event projection and office layout');
