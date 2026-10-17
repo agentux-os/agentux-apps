@@ -1,6 +1,14 @@
 # AgentUX Apps
 
+<p>
+  <a href="https://github.com/agentux-os/agentux-apps/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/agentux-os/agentux-apps?label=updated&labelColor=0b0d10&color=4f7d0b"></a>
+  <a href="https://github.com/agentux-os/agentux-apps"><img alt="Top language" src="https://img.shields.io/github/languages/top/agentux-os/agentux-apps?label=language&labelColor=0b0d10&color=4f7d0b"></a>
+  <a href="https://agentuxos.org"><img alt="Website" src="https://img.shields.io/badge/website-agentuxos.org-c6f36b?labelColor=0b0d10"></a>
+</p>
+
 AgentUX Apps contains the web experiences for the AgentUX platform.
+
+The repository is continuously checked by its package scripts. It is not a release artifact: the current web experience follows the `main` branch and consumes the versioned contracts exposed by [AgentUX Command](https://github.com/agentux-os/agentux-command) and [AgentUX Protocol](https://github.com/agentux-os/agentux-protocol).
 
 The first application is the remote AgentUX Command experience. It includes AgentUX Office: a visual 2D command center that projects real organizational state, missions, agents, runs and incidents for leadership.
 
