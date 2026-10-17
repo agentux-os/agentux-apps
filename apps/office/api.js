@@ -19,7 +19,7 @@ async function readJSON(response) {
   try { return await response.json(); } catch { return null; }
 }
 
-export function createCommandApi({ baseUrl, token, fetchImpl = fetch }) {
+export function createCommandApi({ baseUrl, token, organizationId = 'org-demo', fetchImpl = fetch }) {
   const request = async (path, options = {}) => fetchImpl(`${baseUrl.replace(/\/$/, '')}${path}`, {
     ...options,
     headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) }
@@ -41,7 +41,7 @@ export function createCommandApi({ baseUrl, token, fetchImpl = fetch }) {
     async resolveApproval(approvalId, input) {
       try {
         const response = await request(`/v1/approvals/${encodeURIComponent(approvalId)}/resolve`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input)
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, organizationId: input.organizationId || organizationId })
         });
         const body = await readJSON(response);
         return response.ok ? { ok: true, decision: body } : { ok: false, conflict: body?.conflict || { code: 'request_failed', message: body?.error || 'approval request failed' } };
