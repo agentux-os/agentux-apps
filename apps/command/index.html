@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AgentUX Command</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">AGENTUX / COMMAND</p>
+          <h1>Fleet <span>· nodes and their agents</span></h1>
+          <p class="subtle" id="instance">Command server</p>
+        </div>
+        <div class="connection"><i></i> <span id="connection-status">loading</span></div>
+      </header>
+
+      <section class="metrics" aria-label="Fleet overview">
+        <article class="metric-card"><span>Nodes online</span><strong id="metric-online">0/0</strong><small>reporting in the last 2 minutes</small></article>
+        <article class="metric-card warning"><span>Agents at a limit</span><strong id="metric-limits">0</strong><small>out of use until they reset</small></article>
+        <article class="metric-card approval"><span>Waiting for people</span><strong id="metric-approvals">0</strong><small>approvals on nodes</small></article>
+        <article class="metric-card"><span>Runs in motion</span><strong id="metric-runs">0</strong><small>across the fleet</small></article>
+      </section>
+
+      <section class="panel" aria-labelledby="nodes-title">
+        <div class="panel-heading">
+          <div><p class="eyebrow">NODES</p><h2 id="nodes-title">Every node, its agents and limits</h2></div>
+          <button id="refresh" type="button">Refresh</button>
+        </div>
+        <div class="batch" id="batch" hidden>
+          <strong id="batch-count">0 selected</strong>
+          <label>Agent <select id="batch-agent"><option value="claude-code">Claude Code</option><option value="codex">Codex</option><option value="opencode">OpenCode</option><option value="antigravity">Antigravity</option></select></label>
+          <button type="button" id="batch-test">Test agent</button>
+          <button type="button" id="batch-lift">Limit lifted</button>
+          <button type="button" id="batch-prefs">Push preferences…</button>
+        </div>
+        <div class="prefs-editor" id="prefs-editor" hidden>
+          <label for="prefs-json">Agent preferences for the selected nodes (JSON, as in <code>aux preferences --json</code>). Nodes hold this for someone there to accept, unless their policy allows it.</label>
+          <textarea id="prefs-json" rows="8" spellcheck="false">{
+  "order": ["opencode", "claude-code"],
+  "roles": {},
+  "fallback": null,
+  "idleMinutes": null,
+  "toolMinutes": null,
+  "notifications": true
+}</textarea>
+          <div><button type="button" id="prefs-send">Send to the selected nodes</button> <button type="button" id="prefs-cancel">Cancel</button></div>
+        </div>
+        <table class="nodes" aria-label="Nodes">
+          <thead><tr><th><input type="checkbox" id="select-all" aria-label="Select every node" /></th><th>Node</th><th>State</th><th>Agents</th><th>Spend (today · 7 days)</th><th>Runs</th><th></th></tr></thead>
+          <tbody id="node-rows"></tbody>
+        </table>
+        <p class="empty" id="nodes-empty" hidden>No node has reported yet. Enroll one below.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="enroll-title">
+        <div class="panel-heading"><div><p class="eyebrow">ENROLLMENT</p><h2 id="enroll-title">Add nodes</h2></div></div>
+        <p class="subtle">Tokens are for this Command server only, single use, and expire. Give one to each machine (<code>aux node enroll &lt;this server&gt;</code>), or ask for provision files and hand one to each new VM.</p>
+        <form id="token-form" class="token-form">
+          <label>Organization <input name="organizationId" required value="acme" /></label>
+          <label>How many <input name="count" type="number" min="1" max="500" value="1" /></label>
+          <label>Node name <input name="nodeName" placeholder="optional, for one node" /></label>
+          <label>Valid for (hours) <input name="ttlHours" type="number" min="1" max="720" value="24" /></label>
+          <label><input name="requireApproval" type="checkbox" /> Approve each node before it reports</label>
+          <label>Provision files <select name="profile"><option value="">no</option><option value="node">Agent Node</option><option value="workstation">Workstation</option><option value="complete">Complete</option></select></label>
+          <label>User on the machine <input name="user" placeholder="dev" /></label>
+          <button type="submit">Issue tokens</button>
+        </form>
+        <div id="issued" class="issued" aria-live="polite"></div>
+        <h3>Enrolled nodes</h3>
+        <ul id="enrollments" class="enrollments"></ul>
+      </section>
+
+      <section class="panel" aria-labelledby="log-title">
+        <div class="panel-heading"><div><p class="eyebrow">ACTIVITY</p><h2 id="log-title">What this console did</h2></div></div>
+        <ul id="log" class="event-list"></ul>
+      </section>
+    </main>
+    <script src="/config.js"></script>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

@@ -21,6 +21,10 @@ The repository is continuously checked by its package scripts. It is not a relea
 
 The first application is the remote AgentUX Command experience. It includes AgentUX Office: a visual 2D command center that projects real organizational state, missions, agents, runs and incidents for leadership.
 
+## Command console
+
+`apps/command` is the fleet console for operators: every node with its state, agents (signed in, versions, plan usage, usage limits), spending and runs; per node, test an agent, lift a limit, cancel a run or answer an approval; for several nodes at once, test an agent, lift a limit or push agent preferences (held at each node for someone there unless its policy allows it). It issues enrollment tokens, with ready provision files for new VMs, and approves or revokes enrolled nodes. `npm run serve:command` serves it on port 4174 with demo data, or against a Command server with `COMMAND_URL` and `COMMAND_TOKEN` (an operator token with `node.command` and `node.enroll`).
+
 ## Planned layout
 
 ```text
