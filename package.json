@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test": "node scripts/validate-office.mjs",
-    "serve": "node scripts/serve-office.mjs"
+    "test": "node scripts/validate-office.mjs && node scripts/validate-command.mjs",
+    "serve": "node scripts/serve-office.mjs",
+    "serve:command": "node scripts/serve-command.mjs"
   }
 }
