@@ -23,3 +23,20 @@ h1 .muted { color: var(--muted); font-weight: 400; }
 button:disabled { opacity: .45; cursor: not-allowed; }
 .desk.complete b { color: var(--muted); } .desk.idle b { color: var(--muted); }
 .event-item.waiting strong { color: var(--amber); }
+.toolbar { display: flex; gap: 8px; align-items: center; } .toolbar button { margin: 0; }
+.publish-note { text-align: right; min-height: 1em; font-size: 12px; }
+.editor-layout { display: grid; grid-template-columns: 1.7fr 1fr; gap: 16px; margin-top: 16px; }
+.editor-section, .editor-side section { background: #151a1c; border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin-bottom: 14px; }
+.editor-section h2, .editor-side h2 { margin-bottom: 12px; }
+.editor-section .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.editor-section label { display: flex; flex-direction: column; gap: 4px; }
+.editor-section input, .editor-section select, .editor-side textarea { margin: 0; background: #202827; color: #ecf0eb; border: 1px solid #36423e; border-radius: 7px; padding: 7px 9px; min-width: 120px; font: inherit; font-size: 12px; }
+.editor-section button { margin: 10px 0 0; } .editor-section .row button.remove { margin: 0 0 2px auto; color: var(--red); }
+.workflow { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; } .row.step { padding-left: 18px; }
+.plain { list-style: none; padding: 0; margin: 0; font-size: 12px; } .plain li { padding: 6px 0; border-bottom: 1px solid var(--line); } .plain li.ok { color: var(--green); }
+#problems li:not(.ok) { color: var(--amber); }
+.changes li.added strong { color: var(--green); } .changes li.removed strong { color: var(--red); } .changes li.changed strong { color: var(--amber); } .changes ul { margin: 4px 0 0 16px; padding: 0; color: var(--muted); }
+.block { display: block; margin-top: 10px; } .block textarea { display: block; width: 100%; margin-top: 4px; }
+button.link { background: none; border: 0; padding: 0; margin: 0; color: var(--green); text-decoration: underline; }
+.state-banner button { margin-left: 10px; }
+a { color: var(--green); }

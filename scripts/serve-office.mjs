@@ -19,7 +19,8 @@ const config = commandUrl ? { command: true, organizationId: process.env.COMMAND
 async function proxy(request, response) {
   const headers = { accept: request.headers.accept || 'application/json' };
   if (request.headers['content-type']) headers['content-type'] = request.headers['content-type'];
-  if (request.headers['last-event-id']) headers['last-event-id'] = request.headers['last-event-id'];
+  // If-Match carries an editor's revision: without it, stale saves would overwrite.
+  for (const name of ['last-event-id', 'if-match']) if (request.headers[name]) headers[name] = request.headers[name];
   if (token) headers.authorization = `Bearer ${token}`;
   const body = ['GET', 'HEAD'].includes(request.method) ? undefined : Readable.toWeb(request);
   const controller = new AbortController();
@@ -29,7 +30,8 @@ async function proxy(request, response) {
     const upstream = await fetch(`${commandUrl}${request.url}`, { method: request.method, headers, body, duplex: 'half', signal: controller.signal });
     response.writeHead(upstream.status, {
       'content-type': upstream.headers.get('content-type') || 'application/json',
-      'cache-control': 'no-store'
+      'cache-control': 'no-store',
+      ...(upstream.headers.get('etag') ? { etag: upstream.headers.get('etag') } : {})
     });
     if (!upstream.body) return response.end();
     // Streams pass through as they come (the live event stream).
