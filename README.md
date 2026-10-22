@@ -45,27 +45,41 @@ Office is a visualization and interaction surface, not an execution engine. The 
 - `agentux-desktop` remains the local Tauri cockpit.
 - `agentux-core` remains the local runtime and node execution layer.
 
-## Status
+## Office
 
-Office MVP is available at [`apps/office`](apps/office). It uses a typed
-`CommandApi` adapter for the remote projection and keeps a deterministic
-`FixtureApi` for demos without a server. Runtime configuration is supplied by
-`window.AGENTUX_OFFICE_CONFIG` (for example `{ commandUrl, token,
-organizationId }`); credentials are never embedded in the source.
+`apps/office` is AgentUX Office: an organization as AgentUX Command sees it,
+for its leaders.
 
-The adapter preserves the distributed contract's `organizationId`,
-`definitionVersion`, `projectedAt`, `freshness`, `source` and `lastEventId`.
-It distinguishes ready, stale, empty, degraded and error states, and keeps
-approval conflicts typed instead of converting a failed mutation into success.
-Approval submissions include the configured `organizationId`, so Command can
-scope idempotent retries to the organization and approval. Keep this identifier
-aligned with the authenticated session when production sessions are enabled.
-Operational drill-down is tracked in [#5](https://github.com/agentux-os/agentux-apps/issues/5);
-accessibility and reliability hardening in [#6](https://github.com/agentux-os/agentux-apps/issues/6).
+- **Floor**: the organization's nodes (reporting or not), agents and runs (a
+  node's runs and mission runs), filtered by area, mission and status.
+- **Metrics**: work in motion, what is blocked, approvals waiting, and nodes
+  reporting.
+- **Timeline**: what happened, newest first, and who did it.
+- **Decision queue**: pending approvals, decided through Command. A gate a
+  person must pass refuses service tokens, expired approvals cannot be
+  decided, and every outcome is said plainly (recorded, not allowed, already
+  decided, gone, Command unavailable).
+- **Live**: after loading the projection, Office follows the organization's
+  event stream (`/v1/organizations/<org>/events/stream`) from its last event
+  and reloads the projection as events arrive. The header says whether the
+  stream is live or reconnecting, and a banner says when the projection is
+  stale (no node reports), degraded (some do not), empty, denied or
+  unavailable. Office retries on its own while Command is unavailable.
 
 ```sh
 npm test
-npm run serve
-# open http://127.0.0.1:4173
+npm run serve            # demo data, http://127.0.0.1:4173
+COMMAND_URL=https://command.example COMMAND_TOKEN=auxs1_... COMMAND_ORGANIZATION=acme npm run serve
 ```
 
+With `COMMAND_URL`, `serve-office` passes `/v1/` requests to Command and adds
+`COMMAND_TOKEN` (`organization.read`, plus `approval.decide` to decide), so the
+token never reaches the browser and the event stream works. On Command's own
+origin, Office uses the operator's session instead. `apps/office/model.js`
+turns a projection into what the page shows, and `apps/office/api.js` talks
+to Command. Both are tested (`api.test.mjs`, `model.test.mjs`): loading,
+empty, stale, degraded, denied, unavailable and populated states, approval
+outcomes, and the live stream.
+
+Operational drill-down is tracked in [#5](https://github.com/agentux-os/agentux-apps/issues/5);
+accessibility and reliability hardening in [#6](https://github.com/agentux-os/agentux-apps/issues/6).

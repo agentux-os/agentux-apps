@@ -11,34 +11,36 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">AGENTUX / OFFICE</p>
-          <h1>Acme Robotics <span>· command floor</span></h1>
-          <p class="subtle">Remote read-only projection · definition v3 · updated just now</p>
+          <h1><span id="organization-name">Organization</span> <span class="muted">· command floor</span></h1>
+          <p class="subtle" id="projection-meta">Loading…</p>
         </div>
-        <div class="connection"><i></i> <span id="connection-status">fixture · loading</span></div>
+        <div class="connection"><i></i> <span id="connection-status">loading</span></div>
       </header>
+
+      <p id="state-banner" class="state-banner" role="status" hidden></p>
 
       <section class="metrics" aria-label="Executive overview">
         <article class="metric-card"><span>Active work</span><strong id="metric-active">0</strong><small>runs in motion</small></article>
-        <article class="metric-card warning"><span>Blocked</span><strong id="metric-blocked">0</strong><small>needs attention</small></article>
+        <article class="metric-card warning"><span>Blocked</span><strong id="metric-blocked">0</strong><small>failed runs and offline nodes</small></article>
         <article class="metric-card approval"><span>Approvals</span><strong id="metric-approvals">0</strong><small>human decisions</small></article>
-        <article class="metric-card"><span>Healthy nodes</span><strong id="metric-nodes">0/0</strong><small>registered capacity</small></article>
+        <article class="metric-card"><span>Healthy nodes</span><strong id="metric-nodes">0/0</strong><small>reporting now</small></article>
       </section>
 
       <section class="controls" aria-label="Office filters">
         <label>Area <select id="area-filter"><option value="all">All areas</option></select></label>
         <label>Mission <select id="mission-filter"><option value="all">All missions</option></select></label>
-        <label>Status <select id="status-filter"><option value="all">All statuses</option><option value="active">Active</option><option value="blocked">Blocked</option><option value="waiting">Waiting approval</option><option value="complete">Complete</option></select></label>
+        <label>Status <select id="status-filter"><option value="all">All statuses</option><option value="active">Active</option><option value="waiting">Waiting</option><option value="blocked">Blocked</option><option value="complete">Complete</option><option value="idle">Idle</option></select></label>
         <button id="clear-filters" type="button">Clear filters</button>
       </section>
 
       <section class="approvals-panel" aria-labelledby="approvals-title">
-        <div class="panel-heading"><div><p class="eyebrow">DECISION QUEUE</p><h2 id="approvals-title">Pending approvals</h2></div><span class="subtle">Command-authoritative</span></div>
+        <div class="panel-heading"><div><p class="eyebrow">DECISION QUEUE</p><h2 id="approvals-title">Pending approvals</h2></div><span class="subtle">Decided in AgentUX Command</span></div>
         <div id="approval-list" class="approval-list" aria-live="polite"></div>
       </section>
 
       <section class="workspace">
         <div class="floor-panel">
-          <div class="panel-heading"><div><p class="eyebrow">LIVE FLOOR</p><h2>People, agents and nodes</h2></div><span class="legend"><i class="active-dot"></i> active <i class="blocked-dot"></i> blocked</span></div>
+          <div class="panel-heading"><div><p class="eyebrow">FLOOR</p><h2>Nodes, agents and runs</h2></div><span class="legend"><i class="active-dot"></i> active <i class="blocked-dot"></i> blocked</span></div>
           <div id="office-grid" class="office-grid" aria-live="polite"></div>
         </div>
         <aside class="events-panel">
@@ -46,8 +48,9 @@
           <ol id="event-list" class="event-list"></ol>
         </aside>
       </section>
-      <footer><span>Office is a read-only projection.</span><span>Control actions require Command permissions.</span></footer>
+      <footer><span>Office shows what AgentUX Command knows.</span><span>Decisions need approval.decide in Command.</span></footer>
     </main>
+    <script src="/config.js"></script>
     <script type="module" src="/app.js"></script>
   </body>
 </html>
