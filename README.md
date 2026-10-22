@@ -81,5 +81,38 @@ to Command. Both are tested (`api.test.mjs`, `model.test.mjs`): loading,
 empty, stale, degraded, denied, unavailable and populated states, approval
 outcomes, and the live stream.
 
+### Organization editor
+
+`apps/office/editor.html` (linked from the floor) is where leaders change the
+organization: its name and publication policy, areas, roles and their
+permissions, agents and their roles, missions, approval gates, and workflows
+step by step. It edits drafts in AgentUX Command
+([organization definitions](https://github.com/agentux-os/agentux-command#organization-definitions)):
+
+- **Problems** are shown as you type: missing or duplicate ids, references to
+  roles, areas, missions or gates that do not exist, a step going outside its
+  workflow, unknown permissions, a human-required gate no human role can pass.
+  These are Command's checks, and Command checks again on save and publish.
+- **Changes** from the published version: added, removed and changed areas,
+  roles, agents, missions, gates and workflow steps, field by field.
+- **Saving** sends the revision you edited (`If-Match`). If someone saved the
+  draft in between, the editor says so, keeps your changes on screen, and
+  offers to load theirs. Nothing is silently overwritten.
+- **Review**: someone else (with `approval.decide`) approves a revision or asks
+  for changes. When the organization's publication policy is
+  `review-required`, only an approved revision can be published, and a later
+  save needs a new approval.
+- **Publishing** freezes the version: Command runs missions from it and Office
+  shows it. **History** lists every version. A new draft starts from the
+  published version, or from any earlier one, which is how a rollback is
+  done.
+- Without `organization.edit` the editor is read-only, and every refusal from
+  Command is explained.
+
+With `serve-office` it uses the same proxy as the floor. The proxy forwards
+`If-Match` and `ETag`, and `scripts/serve-office.test.mjs` checks that it does.
+Without `COMMAND_URL` it works on demo data with the same rules
+(`createFixtureDefinitionsApi`).
+
 Operational drill-down is tracked in [#5](https://github.com/agentux-os/agentux-apps/issues/5);
 accessibility and reliability hardening in [#6](https://github.com/agentux-os/agentux-apps/issues/6).

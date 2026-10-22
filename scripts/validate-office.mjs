@@ -21,5 +21,12 @@ for (const marker of ['createCommandApi', 'createFixtureApi', 'loadProjection', 
 
 await import('../apps/office/api.test.mjs');
 await import('../apps/office/model.test.mjs');
+await import('../apps/office/editor.test.mjs');
+await import('./serve-office.test.mjs');
+
+const editor = await readFile(new URL('../apps/office/editor.html', import.meta.url), 'utf8');
+for (const marker of ['sections', 'problems', 'changes', 'reviews', 'history', 'publish', 'state-banner', '/editor.js']) {
+  if (!editor.includes(marker)) throw new Error(`missing editor surface: ${marker}`);
+}
 
 console.log('validated Office HTML, filtering, event projection and office layout');
