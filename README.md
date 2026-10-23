@@ -25,6 +25,21 @@ The first application is the remote AgentUX Command experience. It includes Agen
 
 `apps/command` is the fleet console for operators: every node with its state, agents (signed in, versions, plan usage, usage limits), spending and runs; per node, test an agent, lift a limit, cancel a run or answer an approval; for several nodes at once, test an agent, lift a limit or push agent preferences (held at each node for someone there unless its policy allows it). It issues enrollment tokens, with ready provision files for new VMs, and approves or revokes enrolled nodes. `npm run serve:command` serves it on port 4174 with demo data, or against a Command server with `COMMAND_URL` and `COMMAND_TOKEN` (an operator token with `node.command` and `node.enroll`).
 
+## Releases and CI, per app
+
+Each app has its own version (`apps/<app>/VERSION`), CI and release:
+
+| App | Workflow | Tag | Release |
+|---|---|---|---|
+| Office (`apps/office`: floor and editor) | `office.yml`: unit and browser tests, bundle, image | `office-v<version>` | `agentux-office-<version>.tar.gz` (+ `.sha256`) on a GitHub release; `ghcr.io/agentux-os/agentux-office:<version>` |
+| Command console (`apps/command`) | `console.yml`: tests, bundle | `console-v<version>` | `agentux-console-<version>.tar.gz` (+ `.sha256`) on a GitHub release |
+
+A pull request runs only the workflows of the apps it touches. `npm run bundle -- office` (or `command`) builds a bundle locally into `dist/`: the app's static files without tests, reproducible (sorted, fixed owner and time). The Office image serves the app and passes `/v1/` to Command (`COMMAND_URL`, `COMMAND_ORGANIZATION`, `COMMAND_TOKEN` from a secret), as `npm run serve` does:
+
+```sh
+podman run -p 4173:4173 -e COMMAND_URL=http://command:8080 -e COMMAND_ORGANIZATION=acme   --secret office-token,type=env,target=COMMAND_TOKEN ghcr.io/agentux-os/agentux-office:0.1.0
+```
+
 ## Planned layout
 
 ```text

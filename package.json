@@ -7,7 +7,8 @@
     "test": "node scripts/validate-office.mjs && node scripts/validate-command.mjs",
     "serve": "node scripts/serve-office.mjs",
     "serve:command": "node scripts/serve-command.mjs",
-    "test:browser": "node --test tests/browser.test.mjs"
+    "test:browser": "node --test tests/browser.test.mjs",
+    "bundle": "node scripts/bundle.mjs"
   },
   "devDependencies": {
     "axe-core": "4.14.0",

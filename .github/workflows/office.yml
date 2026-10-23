@@ -1,0 +1,101 @@
+name: Office
+
+# AgentUX Office (apps/office: the floor and the organization editor).
+# Pull requests and main: unit tests, the browser tests (Chromium: axe,
+# keyboard, modals, slow and unavailable Command, a large organization,
+# pt-BR), the bundle and the image (built, not pushed). An `office-v*` tag
+# matching apps/office/VERSION releases them: the bundle and its checksum on
+# a GitHub release, the image as ghcr.io/agentux-os/agentux-office:<version>.
+
+on:
+  push:
+    branches: [main]
+    tags: ['office-v*']
+  pull_request:
+    paths:
+      - apps/office/**
+      - scripts/serve-office*.mjs
+      - scripts/validate-office.mjs
+      - scripts/bundle.mjs
+      - tests/browser.test.mjs
+      - containers/office/**
+      - package.json
+      - package-lock.json
+      - .github/workflows/office.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node scripts/validate-office.mjs
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag matches apps/office/VERSION
+        if: startsWith(github.ref, 'refs/tags/office-v')
+        run: |
+          version=$(cat apps/office/VERSION)
+          [ "office-v$version" = "$GITHUB_REF_NAME" ] || { echo "::error::tag $GITHUB_REF_NAME does not match apps/office/VERSION $version"; exit 1; }
+      - run: node scripts/bundle.mjs office
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agentux-office-bundle
+          path: dist/agentux-office-*
+          if-no-files-found: error
+
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: podman build --pull --tag agentux-office:build --file containers/office/Containerfile .
+      - name: Smoke test
+        run: |
+          podman run -d --name office -p 4173:4173 agentux-office:build
+          for _ in $(seq 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/ | grep -q 'AgentUX Office'
+          curl -fsS http://127.0.0.1:4173/editor.html | grep -q 'organization editor'
+          ! curl -fsS http://127.0.0.1:4173/api.test.mjs >/dev/null 2>&1
+          podman rm -f office
+      - name: Push
+        if: startsWith(github.ref, 'refs/tags/office-v')
+        run: |
+          version=$(cat apps/office/VERSION)
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+          for tag in "$version" latest; do
+            podman tag agentux-office:build "ghcr.io/agentux-os/agentux-office:$tag"
+            podman push "ghcr.io/agentux-os/agentux-office:$tag"
+          done
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/office-v')
+    needs: [test, bundle, image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: agentux-office-bundle
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            agentux-office-*.tar.gz
+            agentux-office-*.tar.gz.sha256
+          fail_on_unmatched_files: true

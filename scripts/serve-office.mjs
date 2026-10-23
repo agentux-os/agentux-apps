@@ -67,4 +67,5 @@ const server = createServer(async (request, response) => {
 });
 
 const port = Number(process.env.PORT ?? 4173);
-server.listen(port, '127.0.0.1', () => console.log(`Office listening on http://127.0.0.1:${port}${commandUrl ? ` (Command: ${commandUrl})` : ' (demo data)'}`));
+const host = process.env.HOST || '127.0.0.1';
+server.listen(port, host, () => console.log(`Office listening on http://${host}:${port}${commandUrl ? ` (Command: ${commandUrl})` : ' (demo data)'}`));

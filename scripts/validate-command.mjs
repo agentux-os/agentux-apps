@@ -14,4 +14,7 @@ for (const marker of ['table.nodes', '.agent.limited', '.token-form']) {
   if (!css.includes(marker)) throw new Error(`missing Command console style: ${marker}`);
 }
 await import('../apps/command/api.test.mjs');
+const { shipped, version } = await import('./bundle.mjs');
+if (shipped('apps/command').some((f) => f.endsWith('.test.mjs'))) throw new Error('the console bundle would ship tests');
+version('apps/command');
 console.log('validated the Command console');

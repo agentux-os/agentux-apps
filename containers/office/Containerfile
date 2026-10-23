@@ -1,0 +1,19 @@
+# AgentUX Office: ghcr.io/agentux-os/agentux-office:<version>. The Office
+# app and the small server that serves it and passes /v1/ to AgentUX
+# Command, adding the operator token there so it never reaches the browser.
+#
+#   podman build -t agentux-office -f containers/office/Containerfile .
+#   podman run -p 4173:4173 -e COMMAND_URL=http://command:8080 \
+#     -e COMMAND_ORGANIZATION=acme --secret office-token,type=env,target=COMMAND_TOKEN agentux-office
+
+FROM docker.io/library/node:22.20.0-alpine3.22
+WORKDIR /srv/agentux
+COPY apps/office/ apps/office/
+COPY scripts/serve-office.mjs scripts/serve-office.mjs
+RUN find apps -name '*.test.mjs' -delete
+USER node
+ENV HOST=0.0.0.0 PORT=4173
+EXPOSE 4173
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:4173/').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+CMD ["node", "scripts/serve-office.mjs"]

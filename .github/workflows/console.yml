@@ -1,0 +1,66 @@
+name: Command console
+
+# The AgentUX Command fleet console (apps/command). Pull requests and main:
+# its tests and the bundle. A `console-v*` tag matching apps/command/VERSION
+# attaches the bundle and its checksum to a GitHub release.
+
+on:
+  push:
+    branches: [main]
+    tags: ['console-v*']
+  pull_request:
+    paths:
+      - apps/command/**
+      - scripts/serve-command.mjs
+      - scripts/validate-command.mjs
+      - scripts/bundle.mjs
+      - package.json
+      - package-lock.json
+      - .github/workflows/console.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/validate-command.mjs
+
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag matches apps/command/VERSION
+        if: startsWith(github.ref, 'refs/tags/console-v')
+        run: |
+          version=$(cat apps/command/VERSION)
+          [ "console-v$version" = "$GITHUB_REF_NAME" ] || { echo "::error::tag $GITHUB_REF_NAME does not match apps/command/VERSION $version"; exit 1; }
+      - run: node scripts/bundle.mjs command
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agentux-console-bundle
+          path: dist/agentux-console-*
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/console-v')
+    needs: [test, bundle]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: agentux-console-bundle
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            agentux-console-*.tar.gz
+            agentux-console-*.tar.gz.sha256
+          fail_on_unmatched_files: true
