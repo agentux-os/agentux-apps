@@ -12,7 +12,7 @@
         <div>
           <p class="eyebrow">AGENTUX / OFFICE</p>
           <h1><span id="organization-name">Organization</span> <span class="muted">· command floor</span></h1>
-          <p class="subtle"><span id="projection-meta">Loading…</span> · <a href="/editor.html">edit the organization</a></p>
+          <p class="subtle"><span id="projection-meta">Loading…</span> · <a href="/editor.html" data-i18n="label.edit">edit the organization</a></p>
         </div>
         <div class="connection"><i></i> <span id="connection-status">loading</span></div>
       </header>
@@ -21,31 +21,32 @@
       <aside id="detail" class="detail-panel" aria-labelledby="detail-title" tabindex="-1" hidden></aside>
 
       <section class="metrics" aria-label="Executive overview">
-        <article class="metric-card"><span>Active work</span><strong id="metric-active">0</strong><small>runs in motion</small></article>
-        <article class="metric-card warning"><span>Blocked</span><strong id="metric-blocked">0</strong><small>failed runs and offline nodes</small></article>
-        <article class="metric-card approval"><span>Approvals</span><strong id="metric-approvals">0</strong><small>human decisions</small></article>
-        <article class="metric-card"><span>Healthy nodes</span><strong id="metric-nodes">0/0</strong><small>reporting now</small></article>
+        <article class="metric-card"><span data-i18n="label.active">Active work</span><strong id="metric-active">0</strong><small data-i18n="label.activeHint">runs in motion</small></article>
+        <article class="metric-card warning"><span data-i18n="label.blocked">Blocked</span><strong id="metric-blocked">0</strong><small data-i18n="label.blockedHint">failed runs and offline nodes</small></article>
+        <article class="metric-card approval"><span data-i18n="label.approvals">Approvals</span><strong id="metric-approvals">0</strong><small data-i18n="label.approvalsHint">human decisions</small></article>
+        <article class="metric-card"><span data-i18n="label.nodes">Healthy nodes</span><strong id="metric-nodes">0/0</strong><small data-i18n="label.nodesHint">reporting now</small></article>
       </section>
 
       <section class="controls" aria-label="Office filters">
-        <label>Area <select id="area-filter"><option value="all">All areas</option></select></label>
-        <label>Mission <select id="mission-filter"><option value="all">All missions</option></select></label>
-        <label>Status <select id="status-filter"><option value="all">All statuses</option><option value="active">Active</option><option value="waiting">Waiting</option><option value="blocked">Blocked</option><option value="complete">Complete</option><option value="idle">Idle</option></select></label>
-        <button id="clear-filters" type="button">Clear filters</button>
+        <label><span data-i18n="label.area">Area</span> <select id="area-filter"><option value="all">All areas</option></select></label>
+        <label><span data-i18n="label.mission">Mission</span> <select id="mission-filter"><option value="all">All missions</option></select></label>
+        <label><span data-i18n="label.status">Status</span> <select id="status-filter"><option value="all" data-i18n="label.allStatuses">All statuses</option><option value="active" data-i18n="status.active">Active</option><option value="waiting" data-i18n="status.waiting">Waiting</option><option value="blocked" data-i18n="status.blocked">Blocked</option><option value="complete" data-i18n="status.complete">Complete</option><option value="idle" data-i18n="status.idle">Idle</option></select></label>
+        <button id="clear-filters" type="button" data-i18n="label.clear">Clear filters</button>
       </section>
 
       <section class="approvals-panel" aria-labelledby="approvals-title">
-        <div class="panel-heading"><div><p class="eyebrow">DECISION QUEUE</p><h2 id="approvals-title">Pending approvals</h2></div><span class="subtle">Decided in AgentUX Command</span></div>
+        <div class="panel-heading"><div><p class="eyebrow">DECISION QUEUE</p><h2 id="approvals-title" data-i18n="label.queue">Pending approvals</h2></div><span class="subtle">Decided in AgentUX Command</span></div>
         <div id="approval-list" class="approval-list" aria-live="polite"></div>
       </section>
 
       <section class="workspace">
         <div class="floor-panel">
-          <div class="panel-heading"><div><p class="eyebrow">FLOOR</p><h2>Nodes, agents and runs</h2></div><span class="legend"><i class="active-dot"></i> active <i class="blocked-dot"></i> blocked</span></div>
-          <div id="office-grid" class="office-grid" aria-live="polite"></div>
+          <div class="panel-heading"><div><p class="eyebrow">FLOOR</p><h2 data-i18n="label.floor">Nodes, agents and runs</h2></div><span class="legend"><i class="active-dot"></i> active <i class="blocked-dot"></i> blocked</span></div>
+          <div id="office-grid" class="office-grid"></div>
+          <p id="floor-more" class="subtle" role="status" hidden></p>
         </div>
         <aside class="events-panel">
-          <div class="panel-heading"><div><p class="eyebrow">EVENT STREAM</p><h2>What is happening</h2></div><span class="live-pill">LIVE</span></div>
+          <div class="panel-heading"><div><p class="eyebrow">EVENT STREAM</p><h2 data-i18n="label.events">What is happening</h2></div><span class="live-pill">LIVE</span></div>
           <ol id="event-list" class="event-list"></ol>
         </aside>
       </section>

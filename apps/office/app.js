@@ -1,10 +1,19 @@
 import { createCommandApi, createFixtureApi } from './api.js';
-import { decisionMessage, matches, officeModel, stateMessage } from './model.js';
+import { DESK_LIMIT, decisionMessage, matches, officeModel, retryDelay, stateMessage } from './model.js';
+import { setLocale, t, translatePage } from './i18n.js';
 import { correlated, detailOf, href, parseRoute, relatedTo } from './detail.js';
 
 const $ = (id) => document.getElementById(id);
 const filters = { area: 'all', mission: 'all', status: 'all' };
 const config = globalThis.AGENTUX_OFFICE_CONFIG || {};
+setLocale(config.locale || navigator.language);
+
+/**
+ * What this page measured, for whoever looks (`agentuxOffice.metrics` in the
+ * console, or a test). Nothing leaves the browser.
+ */
+const metrics = { loads: 0, loadFailures: 0, lastLoadMs: 0, renders: 0, lastRenderMs: 0, reconnects: 0, decisions: 0, decisionFailures: 0 };
+globalThis.agentuxOffice = { metrics };
 
 /** Demo data in the shape Command serves, for Office without a server. */
 const now = Date.now();
@@ -41,7 +50,7 @@ let reloadTimer = null;
 
 const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const clock = (iso) => { const t = Date.parse(iso); return Number.isNaN(t) ? '' : new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); };
-const ago = (iso) => { const s = Math.round((Date.now() - Date.parse(iso)) / 1000); return Number.isNaN(s) ? 'unknown' : s < 60 ? 'just now' : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)} h ago`; };
+const ago = (iso) => { const s = Math.round((Date.now() - Date.parse(iso)) / 1000); return Number.isNaN(s) ? '?' : s < 60 ? t('time.now') : s < 3600 ? t('time.minutes', { n: Math.round(s / 60) }) : t('time.hours', { n: Math.round(s / 3600) }); };
 
 function apiForRuntime() {
   // Behind serve-office (COMMAND_URL) or on Command's own origin: same-origin calls.
@@ -52,7 +61,12 @@ function showState(status, error) {
   const message = stateMessage(status, error);
   const banner = $('state-banner');
   banner.hidden = !message;
-  if (message) { banner.className = `state-banner ${message.tone}`; banner.textContent = message.text; }
+  if (message) {
+    banner.className = `state-banner ${message.tone}`;
+    // Errors interrupt a screen reader; the rest wait their turn.
+    banner.setAttribute('role', message.tone === 'error' ? 'alert' : 'status');
+    banner.textContent = message.text;
+  }
 }
 
 function setConnection(text) { $('connection-status').textContent = text; }
@@ -60,35 +74,53 @@ function setConnection(text) { $('connection-status').textContent = text; }
 function fillSelect(id, values, label) {
   const select = $(id);
   const current = select.value;
-  select.innerHTML = `<option value="all">${label}</option>` + values.map((v) => `<option>${escape(v)}</option>`).join('');
+  select.innerHTML = `<option value="all">${escape(t(label))}</option>` + values.map((v) => `<option>${escape(v)}</option>`).join('');
   select.value = values.includes(current) ? current : 'all';
 }
 
 function render() {
+  const started = performance.now();
   $('organization-name').textContent = model.organization;
-  $('projection-meta').textContent = `${api.mode === 'fixture' ? 'Demo data' : 'From AgentUX Command'} · ${model.definitionVersion} · updated ${ago(model.projectedAt)}`;
-  fillSelect('area-filter', model.filters.areas, 'All areas');
-  fillSelect('mission-filter', model.filters.missions, 'All missions');
-  const desks = model.desks.filter((desk) => matches(desk, filters));
+  $('projection-meta').textContent = t('meta', { source: t(api.mode === 'fixture' ? 'meta.demo' : 'meta.command'), definition: model.definitionVersion, ago: ago(model.projectedAt) });
+  fillSelect('area-filter', model.filters.areas, 'label.allAreas');
+  fillSelect('mission-filter', model.filters.missions, 'label.allMissions');
+  const matching = model.desks.filter((desk) => matches(desk, filters));
+  // A large organization draws its first desks; filters reach the rest.
+  const desks = matching.slice(0, DESK_LIMIT);
+  $('floor-more').hidden = matching.length <= DESK_LIMIT;
+  $('floor-more').textContent = t('floor.more', { shown: desks.length, total: matching.length });
   $('office-grid').innerHTML = desks.length
-    ? desks.map((desk) => { const [kind, ...rest] = desk.id.split(':'); return `<a class="desk ${escape(desk.status)}" href="${escape(href(kind, rest.join(':')))}" aria-label="${escape(`${desk.kind} ${desk.name}, ${desk.status}`)}"><div class="desk-icon" aria-hidden="true">${escape(desk.kind.slice(0, 1))}</div><div><strong>${escape(desk.name)}</strong><span>${escape(desk.kind)}${desk.detail ? ` · ${escape(desk.detail)}` : ''}</span><small>${escape([desk.area, desk.mission].filter(Boolean).join(' · ') || 'Organization')}</small></div><b>${escape(desk.status)}</b></a>`; }).join('')
-    : `<p class="empty">${model.desks.length ? 'Nothing matches these filters.' : 'No nodes, agents or runs yet.'}</p>`;
+    ? desks.map((desk) => { const [kind, ...rest] = desk.id.split(':'); return `<a class="desk ${escape(desk.status)}" href="${escape(href(kind, rest.join(':')))}"><div class="desk-icon" aria-hidden="true">${escape(desk.kind.slice(0, 1))}</div><div><strong>${escape(desk.name)}</strong><span>${escape(desk.kind)}${desk.detail ? ` · ${escape(desk.detail)}` : ''}</span><small>${escape([desk.area, desk.mission].filter(Boolean).join(' · ') || 'Organization')}</small></div><b>${escape(desk.status)}</b></a>`; }).join('')
+    : `<p class="empty">${escape(t(model.desks.length ? 'floor.filtered' : 'floor.none'))}</p>`;
   $('metric-active').textContent = model.metrics.active;
   $('metric-blocked').textContent = model.metrics.blocked;
   $('metric-approvals').textContent = model.metrics.approvals;
   $('metric-nodes').textContent = model.metrics.healthyNodes;
   const timeline = model.timeline.filter((event) => matches(event, filters));
-  $('event-list').innerHTML = timeline.map((event) => `<li class="event-item ${escape(event.status)}"><span class="event-time">${escape(clock(event.time))}</span><div><strong><a href="${escape(href('event', event.id))}">${escape(event.title)}</a></strong><small>${escape(event.actor)} · ${escape([event.area, event.mission].filter(Boolean).join(' · ') || 'Organization')}</small></div></li>`).join('') || '<li class="empty">No events match these filters.</li>';
+  $('event-list').innerHTML = timeline.map((event) => `<li class="event-item ${escape(event.status)}"><span class="event-time">${escape(clock(event.time))}</span><div><strong><a href="${escape(href('event', event.id))}">${escape(event.title)}</a></strong><small>${escape(event.actor)} · ${escape([event.area, event.mission].filter(Boolean).join(' · ') || 'Organization')}</small></div></li>`).join('') || `<li class="empty">${escape(t('events.none'))}</li>`;
   $('approval-list').innerHTML = model.approvals.length
-    ? model.approvals.map((a) => `<article class="approval-card${a.expired ? ' expired' : ''}"><div><strong><a href="${escape(href('approval', a.id))}">${escape(a.title)}</a></strong><small data-outcome="${escape(a.id)}">${escape(a.detail || 'Run')} · ${a.expired ? 'expired' : `expires ${escape(a.expiresAt ? clock(a.expiresAt) : 'not specified')}`}</small></div><div class="approval-actions"><button data-approval="${escape(a.id)}" data-decision="approved" ${a.expired ? 'disabled' : ''}>Approve</button><button data-approval="${escape(a.id)}" data-decision="rejected" ${a.expired ? 'disabled' : ''}>Reject</button></div></article>`).join('')
-    : '<p class="empty">No pending approvals.</p>';
+    ? model.approvals.map((a) => `<article class="approval-card${a.expired ? ' expired' : ''}"><div><strong><a href="${escape(href('approval', a.id))}">${escape(a.title)}</a></strong><small data-outcome="${escape(a.id)}">${escape(a.detail || 'Run')} · ${escape(a.expired ? t('approvals.expired') : t('approvals.expires', { when: a.expiresAt ? clock(a.expiresAt) : t('approvals.unspecified') }))}</small></div><div class="approval-actions" role="group" aria-label="${escape(a.title)}"><button type="button" data-approval="${escape(a.id)}" data-decision="approved" ${a.expired || deciding.has(a.id) ? 'disabled' : ''}>${escape(t('approve'))}</button><button type="button" data-approval="${escape(a.id)}" data-decision="rejected" ${a.expired || deciding.has(a.id) ? 'disabled' : ''}>${escape(t('reject'))}</button></div></article>`).join('')
+    : `<p class="empty">${escape(t('approvals.none'))}</p>`;
   for (const button of document.querySelectorAll('[data-approval]')) button.addEventListener('click', () => decide(button));
+  metrics.renders += 1;
+  metrics.lastRenderMs = Math.round(performance.now() - started);
 }
+
+/** Approvals with a decision on its way: one at a time, never resent by itself. */
+const deciding = new Set();
 
 async function decide(button) {
   const id = button.dataset.approval;
+  if (deciding.has(id)) return;
+  deciding.add(id);
   for (const b of document.querySelectorAll(`[data-approval="${CSS.escape(id)}"]`)) b.disabled = true;
+  const pending = document.querySelector(`[data-outcome="${CSS.escape(id)}"]`);
+  if (pending) pending.textContent = t('decision.pending');
+  // The same key for the same decision: a retry by hand is replayed by Command, not decided twice.
   const result = await api.resolveApproval(id, { decision: button.dataset.decision, idempotencyKey: `office-${id}-${button.dataset.decision}` });
+  deciding.delete(id);
+  metrics.decisions += 1;
+  if (!result.ok) metrics.decisionFailures += 1;
   const outcome = document.querySelector(`[data-outcome="${CSS.escape(id)}"]`);
   if (outcome) outcome.textContent = decisionMessage(result);
   // Retryable failures leave the buttons usable.
@@ -136,7 +168,11 @@ function closeDetail() {
 }
 
 async function load() {
+  const started = performance.now();
   const result = await api.loadProjection();
+  metrics.loads += 1;
+  metrics.lastLoadMs = Math.round(performance.now() - started);
+  if (!result.projection) metrics.loadFailures += 1;
   if (result.projection) {
     projection = result.projection;
     model = officeModel(result.projection);
@@ -156,20 +192,23 @@ async function boot() {
   api = apiForRuntime();
   for (const [key, id] of Object.entries({ area: 'area-filter', mission: 'mission-filter', status: 'status-filter' })) $(id).addEventListener('change', (event) => { filters[key] = event.target.value; render(); });
   $('clear-filters').addEventListener('click', () => { for (const key of Object.keys(filters)) filters[key] = 'all'; for (const id of ['area-filter', 'mission-filter', 'status-filter']) $(id).value = 'all'; render(); });
+  translatePage(document);
   showState('loading');
-  setConnection(api.mode === 'fixture' ? 'demo data' : 'connecting');
+  setConnection(t(api.mode === 'fixture' ? 'connection.demo' : 'connection.connecting'));
   let result = await load();
-  // Until Command answers: try again, and keep saying why.
-  while (!result.projection && ['unavailable', 'error'].includes(result.status)) {
-    setConnection('Command unavailable · retrying');
-    await new Promise((resolve) => setTimeout(resolve, 10_000));
+  // Until Command answers: try again, waiting longer each time, and say so.
+  for (let attempt = 0; !result.projection && ['unavailable', 'error'].includes(result.status); attempt++) {
+    const delay = retryDelay(attempt);
+    setConnection(t('connection.retrying', { seconds: Math.round(delay / 1000) }));
+    await new Promise((resolve) => setTimeout(resolve, delay));
     result = await load();
   }
-  if (!result.projection) { setConnection('not signed in'); return; }
+  if (!result.projection) { setConnection(t('connection.signedOut')); return; }
   stopFollowing = await api.follow(result.projection, {
     onEvent: () => scheduleReload(),
     onState: (state) => {
-      setConnection({ live: `live · ${model.freshness}`, reconnecting: 'reconnecting…', unavailable: 'event log unavailable', fixture: 'demo data' }[state] || state);
+      if (state === 'reconnecting') metrics.reconnects += 1;
+      setConnection({ live: t('connection.live', { freshness: model.freshness }), reconnecting: t('connection.reconnecting'), unavailable: t('connection.logUnavailable'), fixture: t('connection.demo') }[state] || state);
       if (state === 'live') scheduleReload(0);
     }
   });

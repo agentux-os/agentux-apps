@@ -3,6 +3,8 @@
 // and the pending approvals, with the area and mission each belongs to.
 // Pure functions: app.js renders them, model.test.mjs checks them.
 
+import { t } from './i18n.js';
+
 /** Desk status: active, waiting, blocked, complete or idle. */
 export function runStatus(status) {
   switch (status) {
@@ -121,28 +123,36 @@ export function matches(item, filters) {
 
 /** What the banner says for a load or stream state; null when all is well. */
 export function stateMessage(status, error) {
-  switch (status) {
-    case 'loading': return { tone: 'info', text: 'Loading the organization from Command…' };
-    case 'empty': return { tone: 'info', text: error || 'Nothing here yet: publish a definition or connect a node.' };
-    case 'stale': return { tone: 'warning', text: 'Stale: none of the organization’s nodes is reporting. What you see may be out of date.' };
-    case 'degraded': return { tone: 'warning', text: 'Degraded: some of the organization’s nodes are not reporting.' };
-    case 'denied': return { tone: 'error', text: error || 'You may not see this organization.' };
-    case 'unavailable': return { tone: 'error', text: error || 'Command is unavailable; retrying.' };
-    case 'error': return { tone: 'error', text: error || 'Something went wrong loading the organization.' };
-    default: return null;
-  }
+  const tones = { loading: 'info', empty: 'info', stale: 'warning', degraded: 'warning', denied: 'error', unavailable: 'error', error: 'error' };
+  if (!tones[status]) return null;
+  // Command's own reason, when it gave one, says more than ours.
+  const own = ['empty', 'denied', 'unavailable', 'error'].includes(status) && error;
+  return { tone: tones[status], text: own || t(`state.${status}`) };
 }
 
 /** What a decision's outcome tells the person who made it. */
 export function decisionMessage(result) {
-  if (result.ok) return `Decision recorded: ${result.decision?.decision ?? 'done'}`;
+  if (result.ok) return t('decision.recorded', { decision: result.decision?.decision ?? 'done' });
   const { code, message } = result.conflict || {};
   switch (code) {
-    case 'denied': return `Not allowed: ${message}`;
+    case 'denied': return t('decision.denied', { message });
     case 'unauthenticated': return message;
-    case 'already_decided': return 'Someone already decided this approval.';
-    case 'not_found': return 'This approval no longer exists.';
+    case 'already_decided': return t('decision.already');
+    case 'not_found': return t('decision.gone');
     case 'unavailable': return message;
-    default: return `${code || 'error'}: ${message || 'the decision was not recorded'}`;
+    default: return t('decision.failed', { code: code || 'error', message: message || 'the decision was not recorded' });
   }
+}
+
+/** Desks the floor draws at once; filters narrow the rest. */
+export const DESK_LIMIT = 300;
+
+/**
+ * How long to wait before trying Command again after `attempt` failures:
+ * 2 s doubling up to 60 s, spread by ±20 % so many Offices do not retry in
+ * step. `random` is Math.random, or a test's.
+ */
+export function retryDelay(attempt, random = Math.random) {
+  const base = Math.min(60_000, 2_000 * 2 ** Math.max(0, attempt));
+  return Math.round(base * (0.8 + 0.4 * random()));
 }
