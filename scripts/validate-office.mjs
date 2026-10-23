@@ -31,4 +31,12 @@ for (const marker of ['sections', 'problems', 'changes', 'reviews', 'history', '
   if (!editor.includes(marker)) throw new Error(`missing editor surface: ${marker}`);
 }
 
+const { shipped, version } = await import('./bundle.mjs');
+const files = shipped('apps/office');
+if (files.some((f) => f.endsWith('.test.mjs'))) throw new Error('the Office bundle would ship tests');
+for (const needed of ['index.html', 'editor.html', 'app.js', 'editor.js', 'styles.css']) {
+  if (!files.includes(needed)) throw new Error(`the Office bundle would miss ${needed}`);
+}
+version('apps/office');
+
 console.log('validated Office HTML, filtering, event projection and office layout');
