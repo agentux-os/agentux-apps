@@ -22,6 +22,7 @@ for (const marker of ['createCommandApi', 'createFixtureApi', 'loadProjection', 
 await import('../apps/office/api.test.mjs');
 await import('../apps/office/model.test.mjs');
 await import('../apps/office/detail.test.mjs');
+await import('../apps/office/harden.test.mjs');
 await import('../apps/office/editor.test.mjs');
 await import('./serve-office.test.mjs');
 

@@ -123,4 +123,26 @@ of its chain (same `correlationId`, or caused by it). Missing artifacts, a
 stale projection, an offline node and an unavailable log are each said. Desks
 are links (Tab, Enter), and Escape closes the detail.
 
-Accessibility and reliability hardening in [#6](https://github.com/agentux-os/agentux-apps/issues/6).
+**Dependable**:
+- **Accessible**: errors are announced as alerts and other states as status.
+  Desks, events and approvals work from the keyboard, focus moves to what
+  opens, and axe finds no serious or critical problem on the floor, a detail
+  or the editor (checked in CI).
+- **Decisions**: a decision is sent once, however often it is pressed, and
+  never retried by itself. The same decision always carries the same
+  idempotency key, so retrying by hand is safe. 401, 403, 409 and 503 each say
+  what happened.
+- **Large organizations**: the floor draws 300 desks at a time and says how
+  many more there are. Filters reach the rest. The model handles 12,500 desks
+  within a test budget.
+- **Command unavailable**: Office retries after 2 s, doubling up to a minute
+  with jitter, and says when it will try again.
+- **Languages**: English and Brazilian Portuguese, following the browser
+  (`config.locale` overrides).
+- **Metrics**: `agentuxOffice.metrics` in the console: loads, failures, load
+  and render times, reconnects, decisions. Nothing leaves the browser.
+
+```sh
+npx playwright install chromium   # once
+npm run test:browser              # Office in Chromium against a fake Command
+```
