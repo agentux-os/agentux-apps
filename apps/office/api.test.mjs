@@ -45,6 +45,8 @@ test('says what each failure means: loading states', async () => {
   }
   const offline = createCommandApi({ fetchImpl: async () => { throw new TypeError('fetch failed'); } });
   assert.equal((await offline.loadProjection()).status, 'unavailable');
+  assert.equal((await answering(401, {}).loadProjection()).signIn, true, 'signed out: signing in helps');
+  assert.equal((await answering(403, {}).loadProjection()).signIn, undefined, 'not allowed: signing in again does not');
   assert.equal((await answering(200, { ...projection, freshness: 'stale' }).loadProjection()).status, 'stale');
   assert.equal((await answering(200, { ...projection, freshness: 'degraded' }).loadProjection()).status, 'degraded');
   assert.equal((await answering(200, { ...projection, agents: [] }).loadProjection()).status, 'empty');

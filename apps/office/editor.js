@@ -249,7 +249,12 @@ addEventListener('beforeunload', (event) => { if (state.dirty) event.preventDefa
 async function boot() {
   $('mode').textContent = api.mode === 'fixture' ? 'demo data' : 'AgentUX Command';
   const me = await api.me();
-  if (!me.ok) return banner(me.error === 'unauthenticated' ? 'Sign in to AgentUX Command to edit the organization.' : me.message, 'error');
+  if (!me.ok) {
+    const signIn = me.error === 'unauthenticated' && config.signIn
+      ? { label: 'Sign in', run: () => { location.href = `/v1/auth/login?returnTo=${encodeURIComponent(location.pathname)}`; } }
+      : undefined;
+    return banner(me.error === 'unauthenticated' ? 'Sign in to AgentUX Command to edit the organization.' : me.message, 'error', signIn);
+  }
   state.caps = capabilities(me.body, organizationId);
   if (!state.caps.read) return banner('You may not see this organization (organization.read).', 'error');
   if (!(await refreshVersions())) return;

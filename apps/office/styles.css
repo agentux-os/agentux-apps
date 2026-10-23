@@ -56,3 +56,4 @@ dialog.modal[open] { animation: modal-in .14s ease-out; }
 .modal h2 { margin-bottom: 12px; } .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; } .modal-actions button { margin: 0; }
 .modal textarea { display: block; width: 100%; margin-top: 6px; background: #202827; color: #ecf0eb; border: 1px solid #36423e; border-radius: 7px; padding: 8px 10px; font: inherit; }
 button.primary { color: #101316; background: var(--green); border-color: var(--green); } button.danger { color: #101316; background: var(--red); border-color: var(--red); }
+.banner-action { margin-left: 10px; font-weight: 700; }
