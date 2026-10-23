@@ -114,14 +114,18 @@ With `serve-office` it uses the same proxy as the floor. The proxy forwards
 Without `COMMAND_URL` it works on demo data with the same rules
 (`createFixtureDefinitionsApi`).
 
-**Drill-down**: every desk, event and approval opens its detail, and the
+**Drill-down**: every desk, event and approval opens its detail in a modal, and the
 address (`#/run/<id>`, `#/node/<id>`, `#/mission/<id>`, ...) links straight to
 it. A detail shows what the projection knows (never a guessed value), links to
 related areas, missions, runs, nodes and approvals, and the entity's events
 from the organization's log (last 7 days). For an event, it shows the events
 of its chain (same `correlationId`, or caused by it). Missing artifacts, a
 stale projection, an offline node and an unavailable log are each said. Desks
-are links (Tab, Enter), and Escape closes the detail.
+are links (Tab, Enter). The modal keeps focus inside, and Escape, Close or
+a click outside closes it and leaves its address. **Deciding** an approval
+asks first, in a modal: what is decided, and an optional reason recorded with
+the decision. **Publishing** in the editor first shows the changes from the
+published version in a modal.
 
 **Dependable**:
 - **Accessible**: errors are announced as alerts and other states as status.

@@ -101,7 +101,7 @@ function render() {
   $('approval-list').innerHTML = model.approvals.length
     ? model.approvals.map((a) => `<article class="approval-card${a.expired ? ' expired' : ''}"><div><strong><a href="${escape(href('approval', a.id))}">${escape(a.title)}</a></strong><small data-outcome="${escape(a.id)}">${escape(a.detail || 'Run')} · ${escape(a.expired ? t('approvals.expired') : t('approvals.expires', { when: a.expiresAt ? clock(a.expiresAt) : t('approvals.unspecified') }))}</small></div><div class="approval-actions" role="group" aria-label="${escape(a.title)}"><button type="button" data-approval="${escape(a.id)}" data-decision="approved" ${a.expired || deciding.has(a.id) ? 'disabled' : ''}>${escape(t('approve'))}</button><button type="button" data-approval="${escape(a.id)}" data-decision="rejected" ${a.expired || deciding.has(a.id) ? 'disabled' : ''}>${escape(t('reject'))}</button></div></article>`).join('')
     : `<p class="empty">${escape(t('approvals.none'))}</p>`;
-  for (const button of document.querySelectorAll('[data-approval]')) button.addEventListener('click', () => decide(button));
+  for (const button of document.querySelectorAll('[data-approval]')) button.addEventListener('click', () => confirmDecision(button));
   metrics.renders += 1;
   metrics.lastRenderMs = Math.round(performance.now() - started);
 }
@@ -109,7 +109,35 @@ function render() {
 /** Approvals with a decision on its way: one at a time, never resent by itself. */
 const deciding = new Set();
 
-async function decide(button) {
+/**
+ * Asks before deciding: what is being decided, and an optional reason, in a
+ * modal. Cancel (or Escape) leaves the approval as it was.
+ */
+function confirmDecision(button) {
+  const id = button.dataset.approval;
+  const dialog = $('decision');
+  if (deciding.has(id) || dialog.open) return;
+  const approval = model.approvals.find((a) => a.id === id);
+  const approve = button.dataset.decision === 'approved';
+  dialog.innerHTML = `<form method="dialog" class="modal-body">
+      <p class="eyebrow">DECISION</p>
+      <h2 id="decision-title">${escape(t(approve ? 'decision.approveTitle' : 'decision.rejectTitle'))}</h2>
+      <p><strong>${escape(approval?.title || id)}</strong></p>
+      ${approval?.detail ? `<p class="subtle">${escape(approval.detail)}</p>` : ''}
+      <label class="block">${escape(t('decision.reason'))}<textarea id="decision-reason" rows="3"></textarea></label>
+      <div class="modal-actions">
+        <button type="button" value="cancel" id="decision-cancel">${escape(t('decision.cancel'))}</button>
+        <button type="submit" value="confirm" id="decision-confirm" class="${approve ? 'primary' : 'danger'}" autofocus>${escape(t(approve ? 'decision.confirmApprove' : 'decision.confirmReject'))}</button>
+      </div>
+    </form>`;
+  $('decision-cancel').addEventListener('click', () => dialog.close('cancel'));
+  // On submit, which comes before the dialog closes: a second press that
+  // lands while it closes finds the decision already on its way.
+  dialog.querySelector('form').addEventListener('submit', () => decide(button, $('decision-reason').value.trim()), { once: true });
+  dialog.showModal();
+}
+
+async function decide(button, reason = '') {
   const id = button.dataset.approval;
   if (deciding.has(id)) return;
   deciding.add(id);
@@ -117,7 +145,7 @@ async function decide(button) {
   const pending = document.querySelector(`[data-outcome="${CSS.escape(id)}"]`);
   if (pending) pending.textContent = t('decision.pending');
   // The same key for the same decision: a retry by hand is replayed by Command, not decided twice.
-  const result = await api.resolveApproval(id, { decision: button.dataset.decision, idempotencyKey: `office-${id}-${button.dataset.decision}` });
+  const result = await api.resolveApproval(id, { decision: button.dataset.decision, idempotencyKey: `office-${id}-${button.dataset.decision}`, ...(reason ? { reason } : {}) });
   deciding.delete(id);
   metrics.decisions += 1;
   if (!result.ok) metrics.decisionFailures += 1;
@@ -134,20 +162,19 @@ const clockLong = (iso) => { const t = Date.parse(iso); return Number.isNaN(t) ?
 const eventRow = (e) => `<li><a href="${escape(href('event', e.eventId))}">${escape(e.eventType)}</a> <small>${escape(clockLong(e.occurredAt || e.receivedAt))}${e.actor ? ` · ${escape(e.actor.id)}` : ''}</small></li>`;
 let detailRequest = 0;
 
-/** Shows the entity the address names (`#/run/<id>`), or hides the panel. */
-async function showDetail(focus = true) {
+/** Shows the entity the address names (`#/run/<id>`) in a modal, or closes it. */
+async function showDetail() {
   const route = parseRoute(location.hash);
   const panel = $('detail');
-  if (!route) { panel.hidden = true; return; }
+  if (!route) { if (panel.open) panel.close(); return; }
   const detail = detailOf(projection, route.kind, route.id);
-  panel.hidden = false;
-  panel.innerHTML = `<div class="panel-heading"><div><p class="eyebrow">${escape(route.kind.toUpperCase())}</p><h2 id="detail-title">${escape(detail.title)}</h2></div><button type="button" id="detail-close" aria-label="Close the detail">Close</button></div>
+  panel.innerHTML = `<div class="panel-heading"><div><p class="eyebrow">${escape(route.kind.toUpperCase())}</p><h2 id="detail-title">${escape(detail.title)}</h2></div><button type="button" id="detail-close" autofocus>${escape(t('detail.close'))}</button></div>
     ${detail.notes.map((n) => `<p class="detail-note" role="note">${escape(n)}</p>`).join('')}
     ${detail.fields.length ? `<dl class="detail-fields">${detail.fields.map(([k, v]) => `<dt>${escape(k)}</dt><dd>${escape(v)}</dd>`).join('')}</dl>` : ''}
     ${detail.links.length ? `<h3>Related</h3><ul class="plain">${detail.links.map((l) => `<li><a href="${escape(href(l.kind, l.id))}">${escape(l.kind)} · ${escape(l.label)}</a></li>`).join('')}</ul>` : ''}
     <h3>Events</h3><ul class="plain" id="detail-events" aria-live="polite"><li class="subtle">Loading the organization's log…</li></ul>`;
-  $('detail-close').addEventListener('click', closeDetail);
-  if (focus) panel.focus();
+  $('detail-close').addEventListener('click', () => panel.close());
+  if (!panel.open) panel.showModal();
   const request = ++detailRequest;
   const log = await api.events({ days: 7 });
   if (request !== detailRequest) return;
@@ -162,9 +189,12 @@ async function showDetail(focus = true) {
     : `<li class="subtle">${route.kind === 'event' ? 'No other event in this chain' : 'No events'} in the last 7 days${log.truncated ? ' (the log was cut at its first 5,000 events)' : ''}.</li>`;
 }
 
-function closeDetail() {
-  history.pushState('', document.title, location.pathname + location.search);
-  showDetail();
+// Closing the modal (Close, Escape, a click outside) leaves the address too.
+$('detail').addEventListener('close', () => {
+  if (parseRoute(location.hash)) history.pushState('', document.title, location.pathname + location.search);
+});
+for (const dialog of [$('detail'), $('decision')]) {
+  dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
 }
 
 async function load() {
@@ -177,7 +207,7 @@ async function load() {
     projection = result.projection;
     model = officeModel(result.projection);
     render();
-    if (parseRoute(location.hash)) showDetail(false);
+    if (parseRoute(location.hash)) showDetail();
   }
   showState(result.status === 'ready' ? null : result.status, result.error);
   return result;
@@ -216,5 +246,4 @@ async function boot() {
 
 addEventListener('pagehide', () => stopFollowing());
 addEventListener('hashchange', () => showDetail());
-addEventListener('keydown', (event) => { if (event.key === 'Escape' && !$('detail').hidden) closeDetail(); });
 boot();
