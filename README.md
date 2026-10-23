@@ -114,5 +114,13 @@ With `serve-office` it uses the same proxy as the floor. The proxy forwards
 Without `COMMAND_URL` it works on demo data with the same rules
 (`createFixtureDefinitionsApi`).
 
-Operational drill-down is tracked in [#5](https://github.com/agentux-os/agentux-apps/issues/5);
-accessibility and reliability hardening in [#6](https://github.com/agentux-os/agentux-apps/issues/6).
+**Drill-down**: every desk, event and approval opens its detail, and the
+address (`#/run/<id>`, `#/node/<id>`, `#/mission/<id>`, ...) links straight to
+it. A detail shows what the projection knows (never a guessed value), links to
+related areas, missions, runs, nodes and approvals, and the entity's events
+from the organization's log (last 7 days). For an event, it shows the events
+of its chain (same `correlationId`, or caused by it). Missing artifacts, a
+stale projection, an offline node and an unavailable log are each said. Desks
+are links (Tab, Enter), and Escape closes the detail.
+
+Accessibility and reliability hardening in [#6](https://github.com/agentux-os/agentux-apps/issues/6).

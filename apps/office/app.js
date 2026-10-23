@@ -1,5 +1,6 @@
 import { createCommandApi, createFixtureApi } from './api.js';
 import { decisionMessage, matches, officeModel, stateMessage } from './model.js';
+import { correlated, detailOf, href, parseRoute, relatedTo } from './detail.js';
 
 const $ = (id) => document.getElementById(id);
 const filters = { area: 'all', mission: 'all', status: 'all' };
@@ -33,6 +34,7 @@ const fixtureProjection = {
 };
 
 let api;
+let projection = fixtureProjection;
 let model = officeModel(fixtureProjection);
 let stopFollowing = () => {};
 let reloadTimer = null;
@@ -69,16 +71,16 @@ function render() {
   fillSelect('mission-filter', model.filters.missions, 'All missions');
   const desks = model.desks.filter((desk) => matches(desk, filters));
   $('office-grid').innerHTML = desks.length
-    ? desks.map((desk) => `<article class="desk ${escape(desk.status)}"><div class="desk-icon">${escape(desk.kind.slice(0, 1))}</div><div><strong>${escape(desk.name)}</strong><span>${escape(desk.kind)}${desk.detail ? ` · ${escape(desk.detail)}` : ''}</span><small>${escape([desk.area, desk.mission].filter(Boolean).join(' · ') || 'Organization')}</small></div><b>${escape(desk.status)}</b></article>`).join('')
+    ? desks.map((desk) => { const [kind, ...rest] = desk.id.split(':'); return `<a class="desk ${escape(desk.status)}" href="${escape(href(kind, rest.join(':')))}" aria-label="${escape(`${desk.kind} ${desk.name}, ${desk.status}`)}"><div class="desk-icon" aria-hidden="true">${escape(desk.kind.slice(0, 1))}</div><div><strong>${escape(desk.name)}</strong><span>${escape(desk.kind)}${desk.detail ? ` · ${escape(desk.detail)}` : ''}</span><small>${escape([desk.area, desk.mission].filter(Boolean).join(' · ') || 'Organization')}</small></div><b>${escape(desk.status)}</b></a>`; }).join('')
     : `<p class="empty">${model.desks.length ? 'Nothing matches these filters.' : 'No nodes, agents or runs yet.'}</p>`;
   $('metric-active').textContent = model.metrics.active;
   $('metric-blocked').textContent = model.metrics.blocked;
   $('metric-approvals').textContent = model.metrics.approvals;
   $('metric-nodes').textContent = model.metrics.healthyNodes;
   const timeline = model.timeline.filter((event) => matches(event, filters));
-  $('event-list').innerHTML = timeline.map((event) => `<li class="event-item ${escape(event.status)}"><span class="event-time">${escape(clock(event.time))}</span><div><strong>${escape(event.title)}</strong><small>${escape(event.actor)} · ${escape([event.area, event.mission].filter(Boolean).join(' · ') || 'Organization')}</small></div></li>`).join('') || '<li class="empty">No events match these filters.</li>';
+  $('event-list').innerHTML = timeline.map((event) => `<li class="event-item ${escape(event.status)}"><span class="event-time">${escape(clock(event.time))}</span><div><strong><a href="${escape(href('event', event.id))}">${escape(event.title)}</a></strong><small>${escape(event.actor)} · ${escape([event.area, event.mission].filter(Boolean).join(' · ') || 'Organization')}</small></div></li>`).join('') || '<li class="empty">No events match these filters.</li>';
   $('approval-list').innerHTML = model.approvals.length
-    ? model.approvals.map((a) => `<article class="approval-card${a.expired ? ' expired' : ''}"><div><strong>${escape(a.title)}</strong><small data-outcome="${escape(a.id)}">${escape(a.detail || 'Run')} · ${a.expired ? 'expired' : `expires ${escape(a.expiresAt ? clock(a.expiresAt) : 'not specified')}`}</small></div><div class="approval-actions"><button data-approval="${escape(a.id)}" data-decision="approved" ${a.expired ? 'disabled' : ''}>Approve</button><button data-approval="${escape(a.id)}" data-decision="rejected" ${a.expired ? 'disabled' : ''}>Reject</button></div></article>`).join('')
+    ? model.approvals.map((a) => `<article class="approval-card${a.expired ? ' expired' : ''}"><div><strong><a href="${escape(href('approval', a.id))}">${escape(a.title)}</a></strong><small data-outcome="${escape(a.id)}">${escape(a.detail || 'Run')} · ${a.expired ? 'expired' : `expires ${escape(a.expiresAt ? clock(a.expiresAt) : 'not specified')}`}</small></div><div class="approval-actions"><button data-approval="${escape(a.id)}" data-decision="approved" ${a.expired ? 'disabled' : ''}>Approve</button><button data-approval="${escape(a.id)}" data-decision="rejected" ${a.expired ? 'disabled' : ''}>Reject</button></div></article>`).join('')
     : '<p class="empty">No pending approvals.</p>';
   for (const button of document.querySelectorAll('[data-approval]')) button.addEventListener('click', () => decide(button));
 }
@@ -96,11 +98,50 @@ async function decide(button) {
   if (result.ok) scheduleReload(500);
 }
 
+const clockLong = (iso) => { const t = Date.parse(iso); return Number.isNaN(t) ? '' : new Date(t).toLocaleString(); };
+const eventRow = (e) => `<li><a href="${escape(href('event', e.eventId))}">${escape(e.eventType)}</a> <small>${escape(clockLong(e.occurredAt || e.receivedAt))}${e.actor ? ` · ${escape(e.actor.id)}` : ''}</small></li>`;
+let detailRequest = 0;
+
+/** Shows the entity the address names (`#/run/<id>`), or hides the panel. */
+async function showDetail(focus = true) {
+  const route = parseRoute(location.hash);
+  const panel = $('detail');
+  if (!route) { panel.hidden = true; return; }
+  const detail = detailOf(projection, route.kind, route.id);
+  panel.hidden = false;
+  panel.innerHTML = `<div class="panel-heading"><div><p class="eyebrow">${escape(route.kind.toUpperCase())}</p><h2 id="detail-title">${escape(detail.title)}</h2></div><button type="button" id="detail-close" aria-label="Close the detail">Close</button></div>
+    ${detail.notes.map((n) => `<p class="detail-note" role="note">${escape(n)}</p>`).join('')}
+    ${detail.fields.length ? `<dl class="detail-fields">${detail.fields.map(([k, v]) => `<dt>${escape(k)}</dt><dd>${escape(v)}</dd>`).join('')}</dl>` : ''}
+    ${detail.links.length ? `<h3>Related</h3><ul class="plain">${detail.links.map((l) => `<li><a href="${escape(href(l.kind, l.id))}">${escape(l.kind)} · ${escape(l.label)}</a></li>`).join('')}</ul>` : ''}
+    <h3>Events</h3><ul class="plain" id="detail-events" aria-live="polite"><li class="subtle">Loading the organization's log…</li></ul>`;
+  $('detail-close').addEventListener('click', closeDetail);
+  if (focus) panel.focus();
+  const request = ++detailRequest;
+  const log = await api.events({ days: 7 });
+  if (request !== detailRequest) return;
+  const list = $('detail-events');
+  if (!log.ok) { list.innerHTML = `<li class="detail-note">The event log is unavailable: ${escape(log.error || 'try again')}.</li>`; return; }
+  const own = log.events.filter((e) => relatedTo(e, route.kind, route.id, projection));
+  const event = route.kind === 'event' ? own[0] || (projection.events || []).find((e) => e.eventId === route.id) : null;
+  const chain = event ? correlated(log.events, event) : [];
+  const shown = route.kind === 'event' ? chain : own;
+  list.innerHTML = shown.length
+    ? [...shown].reverse().slice(0, 200).map(eventRow).join('')
+    : `<li class="subtle">${route.kind === 'event' ? 'No other event in this chain' : 'No events'} in the last 7 days${log.truncated ? ' (the log was cut at its first 5,000 events)' : ''}.</li>`;
+}
+
+function closeDetail() {
+  history.pushState('', document.title, location.pathname + location.search);
+  showDetail();
+}
+
 async function load() {
   const result = await api.loadProjection();
   if (result.projection) {
+    projection = result.projection;
     model = officeModel(result.projection);
     render();
+    if (parseRoute(location.hash)) showDetail(false);
   }
   showState(result.status === 'ready' ? null : result.status, result.error);
   return result;
@@ -135,4 +176,6 @@ async function boot() {
 }
 
 addEventListener('pagehide', () => stopFollowing());
+addEventListener('hashchange', () => showDetail());
+addEventListener('keydown', (event) => { if (event.key === 'Escape' && !$('detail').hidden) closeDetail(); });
 boot();
