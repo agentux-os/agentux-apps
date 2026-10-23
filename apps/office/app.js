@@ -78,8 +78,23 @@ function fillSelect(id, values, label) {
   select.value = values.includes(current) ? current : 'all';
 }
 
+/**
+ * A selector for the focused control on the floor, so a redraw (a live
+ * update) gives focus back to the same approval button, desk, event or
+ * filter instead of dropping it.
+ */
+function focusedSelector() {
+  const el = document.activeElement;
+  if (!el || el === document.body) return null;
+  if (el.dataset?.approval) return `[data-approval="${CSS.escape(el.dataset.approval)}"][data-decision="${CSS.escape(el.dataset.decision)}"]`;
+  if (el.matches?.('a[href^="#/"]')) return `${el.tagName.toLowerCase()}[href="${CSS.escape(el.getAttribute('href'))}"]`;
+  if (el.id) return `#${CSS.escape(el.id)}`;
+  return null;
+}
+
 function render() {
   const started = performance.now();
+  const focused = focusedSelector();
   $('organization-name').textContent = model.organization;
   $('projection-meta').textContent = t('meta', { source: t(api.mode === 'fixture' ? 'meta.demo' : 'meta.command'), definition: model.definitionVersion, ago: ago(model.projectedAt) });
   fillSelect('area-filter', model.filters.areas, 'label.allAreas');
@@ -102,6 +117,7 @@ function render() {
     ? model.approvals.map((a) => `<article class="approval-card${a.expired ? ' expired' : ''}"><div><strong><a href="${escape(href('approval', a.id))}">${escape(a.title)}</a></strong><small data-outcome="${escape(a.id)}">${escape(a.detail || 'Run')} · ${escape(a.expired ? t('approvals.expired') : t('approvals.expires', { when: a.expiresAt ? clock(a.expiresAt) : t('approvals.unspecified') }))}</small></div><div class="approval-actions" role="group" aria-label="${escape(a.title)}"><button type="button" data-approval="${escape(a.id)}" data-decision="approved" ${a.expired || deciding.has(a.id) ? 'disabled' : ''}>${escape(t('approve'))}</button><button type="button" data-approval="${escape(a.id)}" data-decision="rejected" ${a.expired || deciding.has(a.id) ? 'disabled' : ''}>${escape(t('reject'))}</button></div></article>`).join('')
     : `<p class="empty">${escape(t('approvals.none'))}</p>`;
   for (const button of document.querySelectorAll('[data-approval]')) button.addEventListener('click', () => confirmDecision(button));
+  if (focused && document.activeElement === document.body) document.querySelector(focused)?.focus();
   metrics.renders += 1;
   metrics.lastRenderMs = Math.round(performance.now() - started);
 }
