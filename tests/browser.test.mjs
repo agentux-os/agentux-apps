@@ -29,7 +29,7 @@ const projection = (overrides = {}) => ({
 });
 
 /** The fake Command's behavior, changed by each test. */
-const scenario = { delay: 0, status: 200, body: projection(), resolves: 0 };
+const scenario = { delay: 0, status: 200, body: projection(), resolves: 0, decisions: [] };
 const command = createServer((request, response) => {
   const url = new URL(request.url, 'http://x');
   const send = (status, body) => { response.writeHead(status, { 'content-type': 'application/json' }); response.end(JSON.stringify(body)); };
@@ -42,7 +42,7 @@ const command = createServer((request, response) => {
     scenario.resolves += 1;
     let body = '';
     request.on('data', (c) => { body += c; });
-    return request.on('end', () => setTimeout(() => send(200, { ok: true, organizationId: 'acme', approvalId: 'ap-1', decision: JSON.parse(body).decision }), 300));
+    return request.on('end', () => { scenario.decisions.push(JSON.parse(body)); setTimeout(() => send(200, { ok: true, organizationId: 'acme', approvalId: 'ap-1', decision: JSON.parse(body).decision }), 300); });
   }
   send(404, { error: 'not found' });
 });
@@ -68,11 +68,15 @@ after(async () => { await browser?.close(); for (const s of servers) s.kill(); c
 async function page(url, options = {}) {
   const context = await browser.newContext({ locale: 'en-US', ...options });
   const p = await context.newPage();
+  // A page error fails loudly instead of as a timeout later.
+  p.on('pageerror', (error) => console.error(`page error at ${url}: ${error.message}`));
   await p.goto(url);
   return p;
 }
 
 async function violations(p) {
+  // Measured at rest, not halfway through an entry animation.
+  await p.emulateMedia({ reducedMotion: 'reduce' });
   await p.addScriptTag({ content: axe });
   const result = await p.evaluate(async () => globalThis.axe.run(document, { resultTypes: ['violations'] }));
   return result.violations.filter((v) => ['serious', 'critical'].includes(v.impact)).map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
@@ -83,24 +87,56 @@ test('the floor, a detail and the editor have no serious accessibility problems'
   await floor.waitForSelector('a.desk');
   assert.deepEqual(await violations(floor), []);
   await floor.goto(`${demo}/#/run/run-fulfillment`);
-  await floor.waitForSelector('#detail:not([hidden]) #detail-title');
+  await floor.waitForSelector('#detail[open] #detail-title');
   assert.deepEqual(await violations(floor), []);
   const editor = await page(`${demo}/editor.html`);
   await editor.waitForSelector('#history li');
   assert.deepEqual(await violations(editor), []);
 });
 
-test('an approval is decided from the keyboard, once however often it is pressed', async () => {
-  Object.assign(scenario, { delay: 0, status: 200, body: projection(), resolves: 0 });
+test('an approval is confirmed in a modal, from the keyboard, once however often it is pressed', async () => {
+  Object.assign(scenario, { delay: 0, status: 200, body: projection(), resolves: 0, decisions: [] });
   const p = await page(`${live}/`);
   const approve = p.locator('button[data-approval="ap-1"][data-decision="approved"]');
+
+  // Cancel decides nothing.
   await approve.focus();
   await p.keyboard.press('Enter');
+  await p.waitForSelector('#decision[open]');
+  assert.match(await p.textContent('#decision-title'), /Approve this/);
+  await p.keyboard.press('Escape');
+  await p.waitForSelector('#decision:not([open])', { state: 'attached' });
+  assert.equal(scenario.resolves, 0, 'cancelled');
+
+  // Confirmed with a reason; pressed again and again, sent once.
+  await approve.focus();
   await p.keyboard.press('Enter');
-  await approve.click({ force: true }).catch(() => {});
-  await p.waitForFunction(() => document.querySelector('[data-outcome="ap-1"]')?.textContent.includes('Decision recorded'));
+  await p.waitForSelector('#decision[open]');
+  await p.fill('#decision-reason', 'Looks right to me');
+  await p.focus('#decision-confirm');
+  await p.keyboard.press('Enter');
+  await p.keyboard.press('Enter');
+  await approve.click({ force: true, timeout: 500 }).catch(() => {});
+  await p.waitForFunction(() => globalThis.agentuxOffice.metrics.decisions === 1);
+  await p.waitForTimeout(800);
   assert.equal(scenario.resolves, 1, 'one request');
+  assert.equal(scenario.decisions[0].reason, 'Looks right to me');
   assert.equal(await p.evaluate(() => globalThis.agentuxOffice.metrics.decisions), 1);
+});
+
+test('details open in a modal that Escape closes, leaving the address', async () => {
+  Object.assign(scenario, { delay: 0, status: 200, body: projection() });
+  const p = await page(`${live}/`);
+  await p.click('a.desk[href="#/run/run-1"]');
+  await p.waitForSelector('#detail[open] #detail-title');
+  assert.equal(new URL(p.url()).hash, '#/run/run-1');
+  assert.equal(await p.evaluate(() => document.activeElement.id), 'detail-close', 'focus moves into the modal');
+  // A related link opens its detail in the same modal.
+  await p.click('#detail a[href="#/mission/ship"]');
+  await p.waitForFunction(() => document.getElementById('detail-title').textContent === 'Ship a release');
+  await p.keyboard.press('Escape');
+  await p.waitForSelector('#detail:not([open])', { state: 'attached' });
+  await p.waitForFunction(() => location.hash === '');
 });
 
 test('a slow Command shows loading, then the organization', async () => {

@@ -178,6 +178,28 @@ async function review(decision) {
   renderSide();
 }
 
+/** Shows what publishing changes, and publishes only when confirmed. */
+function confirmPublish() {
+  const d = state.current;
+  const changes = diff(state.published?.document || null, state.doc);
+  const fmt = (v) => escape(Array.isArray(v) ? v.join(', ') : typeof v === 'object' && v !== null ? JSON.stringify(v) : v ?? '—');
+  const dialog = $('publish-dialog');
+  if (dialog.open) return;
+  dialog.innerHTML = `<form method="dialog">
+      <p class="eyebrow">PUBLISH</p>
+      <h2 id="publish-title">Publish version ${escape(d.definition_version)}?</h2>
+      <p class="subtle">It never changes once published: Command runs missions from it and Office shows it. ${changes.length ? `${changes.length} change${changes.length === 1 ? '' : 's'} from the published version:` : state.published ? 'It is the same as the published version.' : 'It is the first version.'}</p>
+      <ul class="plain changes">${changes.map((c) => `<li class="${c.change}"><strong>${escape(c.change)}</strong> ${escape(c.section)} <code>${escape(c.id)}</code>${c.fields ? `<ul>${c.fields.map((f) => `<li>${escape(f.key)}: ${fmt(f.before)} → ${fmt(f.after)}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>
+      <div class="modal-actions">
+        <button type="button" id="publish-cancel">Cancel</button>
+        <button type="submit" value="confirm" class="primary" autofocus>Publish</button>
+      </div>
+    </form>`;
+  $('publish-cancel').addEventListener('click', () => dialog.close('cancel'));
+  dialog.querySelector('form').addEventListener('submit', () => publish(), { once: true });
+  dialog.showModal();
+}
+
 async function publish() {
   const d = state.current;
   const done = await api.publish(d.definition_version, d.revision);
@@ -218,7 +240,7 @@ $('history').addEventListener('click', (event) => {
   if (event.target.dataset.from) startDraft(Number(event.target.dataset.from));
 });
 $('save').addEventListener('click', save);
-$('publish').addEventListener('click', publish);
+$('publish').addEventListener('click', confirmPublish);
 $('approve').addEventListener('click', () => review('approved'));
 $('request-changes').addEventListener('click', () => review('changes_requested'));
 $('new-draft').addEventListener('click', () => startDraft(state.published?.definition_version));
