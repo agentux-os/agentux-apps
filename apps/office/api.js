@@ -87,6 +87,30 @@ export function createCommandApi({ baseUrl = '', token, organizationId = 'org-de
     },
 
     /**
+     * The organization's events of the last `days` days, oldest first, up to
+     * 5,000: `{ ok, events, truncated }` or `{ ok: false, error }`.
+     */
+    async events({ days = 7 } = {}) {
+      const since = encodeURIComponent(new Date(Date.now() - days * 86_400_000).toISOString());
+      const events = [];
+      let after = 0;
+      try {
+        for (let page = 0; page < 5; page++) {
+          const response = await request(`/v1/organizations/${org}/events?since=${since}&after=${after}&limit=1000`);
+          const body = await readJSON(response);
+          if (!response.ok) return { ok: false, ...failure(response.status, body) };
+          const batch = body?.events || [];
+          events.push(...batch.map((entry) => entry.event));
+          if (batch.length < 1000) return { ok: true, events, truncated: false };
+          after = body.next;
+        }
+        return { ok: true, events, truncated: true };
+      } catch (error) {
+        return { ok: false, status: 'unavailable', error: `Command is unreachable: ${error.message}` };
+      }
+    },
+
+    /**
      * Decides an approval. `{ ok: true, decision }`, or `{ ok: false,
      * conflict: { code, message } }` with code `denied`, `unauthenticated`,
      * `already_decided`, `not_found`, `unavailable` or `request_failed`.
@@ -120,6 +144,7 @@ export function createFixtureApi({ projection } = {}) {
     organizationId: state.organizationId,
     async loadProjection() { return { status: projectionStatus(state), projection: state, error: null }; },
     async follow(_projection, { onState } = {}) { onState?.('fixture'); return () => {}; },
+    async events() { return { ok: true, events: [...(state.events || [])], truncated: false }; },
     async resolveApproval() { return { ok: false, conflict: { code: 'not_found', message: 'approval not found in fixture mode' } }; }
   };
 }
