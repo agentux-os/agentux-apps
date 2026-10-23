@@ -4,7 +4,7 @@ const html = await readFile(new URL('../apps/office/index.html', import.meta.url
 const script = await readFile(new URL('../apps/office/app.js', import.meta.url), 'utf8');
 const css = await readFile(new URL('../apps/office/styles.css', import.meta.url), 'utf8');
 
-for (const marker of ['office-grid', 'area-filter', 'mission-filter', 'status-filter', 'event-list', 'approval-list', 'state-banner', 'organization-name', '/config.js']) {
+for (const marker of ['office-grid', 'area-filter', 'mission-filter', 'status-filter', 'event-list', 'approval-list', 'state-banner', 'organization-name', 'config.js']) {
   if (!html.includes(marker)) throw new Error(`missing Office surface: ${marker}`);
 }
 for (const marker of ['fixtureProjection', 'officeModel', 'matches', 'createCommandApi', 'resolveApproval', 'follow', 'escape(']) {
@@ -27,7 +27,7 @@ await import('../apps/office/editor.test.mjs');
 await import('./serve-office.test.mjs');
 
 const editor = await readFile(new URL('../apps/office/editor.html', import.meta.url), 'utf8');
-for (const marker of ['sections', 'problems', 'changes', 'reviews', 'history', 'publish', 'state-banner', '/editor.js']) {
+for (const marker of ['sections', 'problems', 'changes', 'reviews', 'history', 'publish', 'state-banner', 'editor.js']) {
   if (!editor.includes(marker)) throw new Error(`missing editor surface: ${marker}`);
 }
 

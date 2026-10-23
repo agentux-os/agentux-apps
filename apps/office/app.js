@@ -57,7 +57,10 @@ function apiForRuntime() {
   return config.command ? createCommandApi({ baseUrl: config.commandUrl || '', organizationId: config.organizationId || 'org-demo' }) : createFixtureApi({ projection: fixtureProjection });
 }
 
-function showState(status, error) {
+/** Command's sign-in, coming back to this page (when Command has one). */
+const signInUrl = () => `/v1/auth/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`;
+
+function showState(status, error, signIn = false) {
   const message = stateMessage(status, error);
   const banner = $('state-banner');
   banner.hidden = !message;
@@ -66,6 +69,13 @@ function showState(status, error) {
     // Errors interrupt a screen reader; the rest wait their turn.
     banner.setAttribute('role', message.tone === 'error' ? 'alert' : 'status');
     banner.textContent = message.text;
+    if (signIn && config.signIn) {
+      const link = document.createElement('a');
+      link.href = signInUrl();
+      link.className = 'banner-action';
+      link.textContent = t('signIn');
+      banner.append(' ', link);
+    }
   }
 }
 
@@ -225,7 +235,7 @@ async function load() {
     render();
     if (parseRoute(location.hash)) showDetail();
   }
-  showState(result.status === 'ready' ? null : result.status, result.error);
+  showState(result.status === 'ready' ? null : result.status, result.error, result.signIn);
   return result;
 }
 

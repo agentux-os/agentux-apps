@@ -28,7 +28,7 @@ async function readJSON(response) {
 
 /** What a failed answer means for the person looking at Office. */
 function failure(status, body) {
-  if (status === 401) return { status: 'denied', error: 'Sign in to Command to see this organization.' };
+  if (status === 401) return { status: 'denied', signIn: true, error: 'Sign in to Command to see this organization.' };
   if (status === 403) return { status: 'denied', error: body?.error || 'You may not see this organization.' };
   if (status === 404) return { status: 'empty', error: 'Command has nothing for this organization yet.' };
   if (status === 503 || status === 502 || status === 504) return { status: 'unavailable', error: body?.error || 'Command cannot reach its database.' };
