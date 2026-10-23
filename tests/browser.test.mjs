@@ -124,6 +124,24 @@ test('an approval is confirmed in a modal, from the keyboard, once however often
   assert.equal(await p.evaluate(() => globalThis.agentuxOffice.metrics.decisions), 1);
 });
 
+test('a live update keeps the keyboard focus where it was', async () => {
+  Object.assign(scenario, { delay: 0, status: 200, body: projection() });
+  const p = await page(`${live}/`);
+  const approve = p.locator('button[data-approval="ap-1"][data-decision="approved"]');
+  await approve.focus();
+  const renders = await p.evaluate(() => globalThis.agentuxOffice.metrics.renders);
+  // What the live stream does when an event arrives: the floor is redrawn.
+  await p.evaluate(() => document.getElementById('clear-filters').click());
+  await p.focus('button[data-approval="ap-1"][data-decision="approved"]');
+  await p.evaluate(() => document.getElementById('status-filter').dispatchEvent(new Event('change')));
+  await p.waitForFunction((before) => globalThis.agentuxOffice.metrics.renders > before, renders);
+  assert.equal(
+    await p.evaluate(() => document.activeElement?.dataset?.decision),
+    'approved',
+    'focus is back on the same button after the redraw'
+  );
+});
+
 test('details open in a modal that Escape closes, leaving the address', async () => {
   Object.assign(scenario, { delay: 0, status: 200, body: projection() });
   const p = await page(`${live}/`);
