@@ -32,7 +32,7 @@ function demoApi() {
   });
 }
 
-const api = config.command ? createDefinitionsApi({ baseUrl: config.commandUrl || '', organizationId }) : demoApi();
+const api = config.command ? createDefinitionsApi({ organizationId }) : demoApi();
 const state = { caps: capabilities(null, organizationId), versions: [], current: null, published: null, doc: null, dirty: false };
 
 function banner(text, tone = 'info', action) {

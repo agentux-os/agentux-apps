@@ -4,6 +4,9 @@ body { margin: 0; min-width: 1080px; background: radial-gradient(circle at 18% 0
 .shell { max-width: 1500px; margin: auto; padding: 42px 54px 28px; }
 .topbar, .panel-heading, footer, .controls, .connection, .legend { display: flex; align-items: center; }
 .topbar, .panel-heading, footer { justify-content: space-between; }
+.operator-controls { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; }
+.operator-controls a { color: var(--green); }
+.operator-controls button { margin: 0; }
 .eyebrow { color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .18em; margin: 0 0 9px; }
 h1, h2, p { margin-top: 0; } h1 { font-size: 32px; letter-spacing: -.04em; margin-bottom: 8px; } h1 span { color: var(--muted); font-weight: 400; } h2 { font-size: 17px; margin-bottom: 0; } .subtle, small { color: var(--muted); }
 .connection { border: 1px solid var(--line); padding: 11px 15px; border-radius: 99px; font-size: 12px; color: #c6d1ca; gap: 8px; } .connection i, .active-dot, .blocked-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; display: inline-block; } .blocked-dot { background: var(--red); margin-left: 15px; }

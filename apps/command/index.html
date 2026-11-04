@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>AgentUX Command</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="shell">
@@ -14,9 +14,21 @@
           <h1>Fleet <span>· nodes and their agents</span></h1>
           <p class="subtle" id="instance">Command server</p>
         </div>
-        <div class="connection"><i></i> <span id="connection-status">loading</span></div>
+        <div class="operator-controls" id="operator-controls">
+          <span id="operator-name"></span>
+          <a id="sign-in" href="/v1/auth/login?returnTo=%2Fconsole%2F" hidden>Sign in</a>
+          <button id="sign-out" type="button" hidden>Sign out</button>
+          <div class="connection"><i></i> <span id="connection-status">loading</span></div>
+        </div>
       </header>
 
+      <section class="panel" id="auth-required" aria-labelledby="auth-title" hidden>
+        <p class="eyebrow">OPERATOR ACCESS</p>
+        <h2 id="auth-title">Sign in to AgentUX Command</h2>
+        <p id="auth-message">Sign in with your Command account to view and operate your organization.</p>
+      </section>
+
+      <div id="console-content" hidden>
       <section class="metrics" aria-label="Fleet overview">
         <article class="metric-card"><span>Nodes online</span><strong id="metric-online">0/0</strong><small>reporting in the last 2 minutes</small></article>
         <article class="metric-card warning"><span>Agents at a limit</span><strong id="metric-limits">0</strong><small>out of use until they reset</small></article>
@@ -77,8 +89,9 @@
         <div class="panel-heading"><div><p class="eyebrow">ACTIVITY</p><h2 id="log-title">What this console did</h2></div></div>
         <ul id="log" class="event-list"></ul>
       </section>
+      </div>
     </main>
-    <script src="/config.js"></script>
-    <script type="module" src="/app.js"></script>
+    <script src="config.js"></script>
+    <script type="module" src="app.js"></script>
   </body>
 </html>

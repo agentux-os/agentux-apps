@@ -24,8 +24,8 @@ function outcome(response, body) {
   }
 }
 
-export function createDefinitionsApi({ baseUrl = '', organizationId, fetchImpl = fetch }) {
-  const root = `${baseUrl.replace(/\/$/, '')}/v1/organizations/${encodeURIComponent(organizationId)}`;
+export function createDefinitionsApi({ organizationId, fetchImpl = fetch }) {
+  const root = `/v1/organizations/${encodeURIComponent(organizationId)}`;
   const call = async (url, { method = 'GET', body, revision } = {}) => {
     try {
       const response = await fetchImpl(url, {
@@ -46,7 +46,7 @@ export function createDefinitionsApi({ baseUrl = '', organizationId, fetchImpl =
   return {
     mode: 'command',
     organizationId,
-    me: () => call(`${baseUrl.replace(/\/$/, '')}/v1/auth/me`),
+    me: () => call('/v1/auth/me'),
     list: () => call(`${root}/definitions`),
     get: (version) => call(`${root}/definitions/${version}`),
     /** A new draft: from `document`, or from version `from`. */

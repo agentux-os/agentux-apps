@@ -8,11 +8,12 @@ async function readJSON(response) {
 /** The commands an operator may send a node (AUXP command → node). */
 export const NODE_COMMANDS = ['run.snapshot', 'run.cancel', 'request.resolve', 'bus.post', 'harness.list', 'harness.test', 'limits.clear', 'preferences.set', 'run.start'];
 
-export function createCommandApi({ baseUrl = '', token, fetchImpl = fetch }) {
+export function createCommandApi({ fetchImpl = fetch }) {
   const request = async (path, options = {}) => {
-    const response = await fetchImpl(`${baseUrl.replace(/\/$/, '')}${path}`, {
+    const response = await fetchImpl(path, {
+      credentials: 'same-origin',
       ...options,
-      headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) }
     });
     const body = await readJSON(response);
     if (!response.ok) {
@@ -27,6 +28,8 @@ export function createCommandApi({ baseUrl = '', token, fetchImpl = fetch }) {
 
   return {
     mode: 'command',
+    operator: () => request('/v1/auth/me'),
+    logout: () => request('/v1/auth/logout', { method: 'POST' }),
     instance: () => request('/v1/instance'),
     nodes: () => request('/v1/nodes'),
     enrollments: async () => (await request('/v1/enrollments')).nodes ?? [],

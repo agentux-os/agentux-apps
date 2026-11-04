@@ -23,7 +23,7 @@ The first application is the remote AgentUX Command experience. It includes Agen
 
 ## Command console
 
-`apps/command` is the fleet console for operators: every node with its state, agents (signed in, versions, plan usage, usage limits), spending and runs; per node, test an agent, lift a limit, cancel a run or answer an approval; for several nodes at once, test an agent, lift a limit or push agent preferences (held at each node for someone there unless its policy allows it). It issues enrollment tokens, with ready provision files for new VMs, and approves or revokes enrolled nodes. `npm run serve:command` serves it on port 4174 with demo data, or against a Command server with `COMMAND_URL` and `COMMAND_TOKEN` (an operator token with `node.command` and `node.enroll`).
+`apps/command` is the fleet console for operators: every node with its state, agents (signed in, versions, plan usage, usage limits), spending and runs; per node, test an agent, lift a limit, cancel a run or answer an approval; for several nodes at once, test an agent, lift a limit or push agent preferences (held at each node for someone there unless its policy allows it). It issues enrollment tokens, with ready provision files for new VMs, and approves or revokes enrolled nodes. `npm run serve:command` serves fixture data locally on port 4174. The production path serves the released bundle at `/console/` from Command, on the same origin as its OIDC session; the browser never receives a shared service token. Command must pin the Console release before that route is available in its published image.
 
 ## Releases and CI, per app
 
@@ -34,10 +34,10 @@ Each app has its own version (`apps/<app>/VERSION`), CI and release:
 | Office (`apps/office`: floor and editor) | `office.yml`: unit and browser tests, bundle, image | `office-v<version>` | `agentux-office-<version>.tar.gz` (+ `.sha256`) on a GitHub release; `ghcr.io/agentux-os/agentux-office:<version>` |
 | Command console (`apps/command`) | `console.yml`: tests, bundle | `console-v<version>` | `agentux-console-<version>.tar.gz` (+ `.sha256`) on a GitHub release |
 
-A pull request runs only the workflows of the apps it touches. `npm run bundle -- office` (or `command`) builds a bundle locally into `dist/`: the app's static files without tests, reproducible (sorted, fixed owner and time). The Office image serves the app and passes `/v1/` to Command (`COMMAND_URL`, `COMMAND_ORGANIZATION`, `COMMAND_TOKEN` from a secret), as `npm run serve` does:
+A pull request runs only the workflows of the apps it touches. `npm run bundle -- office` (or `command`) builds a bundle locally into `dist/`: the app's static files without tests, reproducible (sorted, fixed owner and time). The Command image serves Office at `/office/`; it will also serve Console at `/console/` after pinning the Console release. Both use the signed-in operator's same-origin session and Command's authorization checks. `npm run serve` and `npm run serve:command` are local fixture servers only. The standalone Office image is for demos and does not connect to Command.
 
 ```sh
-podman run -p 4173:4173 -e COMMAND_URL=http://command:8080 -e COMMAND_ORGANIZATION=acme   --secret office-token,type=env,target=COMMAND_TOKEN ghcr.io/agentux-os/agentux-office:0.1.0
+podman run -p 4173:4173 ghcr.io/agentux-os/agentux-office:0.1.0
 ```
 
 ## Planned layout
@@ -84,13 +84,12 @@ for its leaders.
 ```sh
 npm test
 npm run serve            # demo data, http://127.0.0.1:4173
-COMMAND_URL=https://command.example COMMAND_TOKEN=auxs1_... COMMAND_ORGANIZATION=acme npm run serve
 ```
 
-With `COMMAND_URL`, `serve-office` passes `/v1/` requests to Command and adds
-`COMMAND_TOKEN` (`organization.read`, plus `approval.decide` to decide), so the
-token never reaches the browser and the event stream works. On Command's own
-origin, Office uses the operator's session instead. `apps/office/model.js`
+The local Office and Command servers use fixture data only. Production Office
+and Console are served by Command on the same origin, use the operator's OIDC
+session, and rely on Command to authorize every request. No web server forwards
+a shared service token on behalf of its visitors. `apps/office/model.js`
 turns a projection into what the page shows, and `apps/office/api.js` talks
 to Command. Both are tested (`api.test.mjs`, `model.test.mjs`): loading,
 empty, stale, degraded, denied, unavailable and populated states, approval
@@ -124,10 +123,9 @@ step by step. It edits drafts in AgentUX Command
 - Without `organization.edit` the editor is read-only, and every refusal from
   Command is explained.
 
-With `serve-office` it uses the same proxy as the floor. The proxy forwards
-`If-Match` and `ETag`, and `scripts/serve-office.test.mjs` checks that it does.
-Without `COMMAND_URL` it works on demo data with the same rules
-(`createFixtureDefinitionsApi`).
+When served by Command at `/office/`, the editor uses the same-origin operator
+session and Command's capability checks. The local `serve-office` uses demo
+data only (`createFixtureDefinitionsApi`).
 
 **Drill-down**: every desk, event and approval opens its detail in a modal, and the
 address (`#/run/<id>`, `#/node/<id>`, `#/mission/<id>`, ...) links straight to

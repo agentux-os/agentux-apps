@@ -9,24 +9,24 @@ const projection = {
 };
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-const answering = (status, body) => createCommandApi({ baseUrl: 'http://command.test', fetchImpl: async () => json(body, status) });
+const answering = (status, body) => createCommandApi({ fetchImpl: async () => json(body, status) });
 
-test('loads a ready projection, same-origin, with a token only when one is given', async () => {
-  const api = createCommandApi({ baseUrl: 'http://command.test', token: 'secret', fetchImpl: async (url, options) => {
-    assert.equal(url, 'http://command.test/v1/office/projection?organizationId=org-demo');
-    assert.equal(options.headers.Authorization, 'Bearer secret');
+test('loads a ready projection with the same-origin operator session and no bearer token', async () => {
+  const api = createCommandApi({ fetchImpl: async (url, options) => {
+    assert.equal(url, '/v1/office/projection?organizationId=org-demo');
+    assert.equal(options.headers.Authorization, undefined);
     assert.equal(options.credentials, 'same-origin');
     return json(projection);
   }});
   const result = await api.loadProjection();
   assert.equal(result.status, 'ready');
   assert.equal(result.projection.lastEventId, 'evt-107');
-  const proxied = createCommandApi({ fetchImpl: async (url, options) => {
+  const sameOrigin = createCommandApi({ fetchImpl: async (url, options) => {
     assert.equal(url, '/v1/office/projection?organizationId=org-demo');
     assert.equal(options.headers.Authorization, undefined);
     return json(projection);
   }});
-  assert.equal((await proxied.loadProjection()).status, 'ready');
+  assert.equal((await sameOrigin.loadProjection()).status, 'ready');
 });
 
 test('says what each failure means: loading states', async () => {
@@ -53,9 +53,9 @@ test('says what each failure means: loading states', async () => {
 });
 
 test('approval decisions: recorded, denied, conflicting, unavailable', async () => {
-  const api = createCommandApi({ organizationId: 'org-tenant-1', baseUrl: 'http://command.test', fetchImpl: async (url, options) => {
+  const api = createCommandApi({ organizationId: 'org-tenant-1', fetchImpl: async (url, options) => {
     const request = JSON.parse(options.body);
-    assert.equal(url, 'http://command.test/v1/approvals/approval-01/resolve');
+    assert.equal(url, '/v1/approvals/approval-01/resolve');
     assert.equal(request.organizationId, 'org-tenant-1', 'scoped to the organization');
     return json({ ok: true, organizationId: 'org-tenant-1', approvalId: 'approval-01', decision: request.decision, idempotencyKey: request.idempotencyKey });
   }});
@@ -91,7 +91,7 @@ class FakeEventSource {
 
 test('follows the live stream from the projection’s last event', async () => {
   const api = createCommandApi({
-    baseUrl: '', organizationId: 'acme', EventSourceImpl: FakeEventSource,
+    organizationId: 'acme', EventSourceImpl: FakeEventSource,
     fetchImpl: async (url) => {
       assert.equal(url, `/v1/organizations/acme/events?since=${encodeURIComponent(projection.projectedAt)}&limit=1000`);
       return json({ events: [{ cursor: 41, event: { eventId: 'evt-106' } }, { cursor: 42, event: { eventId: 'evt-107' } }], next: 42 });

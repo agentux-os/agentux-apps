@@ -1,10 +1,9 @@
-# AgentUX Office: ghcr.io/agentux-os/agentux-office:<version>. The Office
-# app and the small server that serves it and passes /v1/ to AgentUX
-# Command, adding the operator token there so it never reaches the browser.
+# AgentUX Office: ghcr.io/agentux-os/agentux-office:<version>. Demo-only
+# static app; production Office is served by Command at /office/ with each
+# operator's own OIDC session.
 #
 #   podman build -t agentux-office -f containers/office/Containerfile .
-#   podman run -p 4173:4173 -e COMMAND_URL=http://command:8080 \
-#     -e COMMAND_ORGANIZATION=acme --secret office-token,type=env,target=COMMAND_TOKEN agentux-office
+#   podman run -p 4173:4173 agentux-office
 
 FROM docker.io/library/node:22.20.0-alpine3.22
 WORKDIR /srv/agentux
