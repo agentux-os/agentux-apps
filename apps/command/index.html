@@ -11,7 +11,7 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">AGENTUX / COMMAND</p>
-          <h1>Fleet <span>· nodes and their agents</span></h1>
+          <h1 id="console-title">Fleet <span>· nodes and their agents</span></h1>
           <p class="subtle" id="instance">Command server</p>
         </div>
         <div class="operator-controls" id="operator-controls">
@@ -29,6 +29,11 @@
       </section>
 
       <div id="console-content" hidden>
+      <nav class="console-nav" aria-label="Command workspaces">
+        <button type="button" class="nav-tab" data-view="fleet" aria-current="page">Fleet</button>
+        <button type="button" class="nav-tab" data-view="missions" aria-current="false">Missions</button>
+      </nav>
+      <div id="fleet-view">
       <section class="metrics" aria-label="Fleet overview">
         <article class="metric-card"><span>Nodes online</span><strong id="metric-online">0/0</strong><small>reporting in the last 2 minutes</small></article>
         <article class="metric-card warning"><span>Agents at a limit</span><strong id="metric-limits">0</strong><small>out of use until they reset</small></article>
@@ -88,6 +93,23 @@
       <section class="panel" aria-labelledby="log-title">
         <div class="panel-heading"><div><p class="eyebrow">ACTIVITY</p><h2 id="log-title">What this console did</h2></div></div>
         <ul id="log" class="event-list"></ul>
+      </section>
+      </div>
+      <section id="mission-view" hidden aria-labelledby="mission-heading">
+        <section class="panel mission-head">
+          <div class="panel-heading"><div><p class="eyebrow">REMOTE OPERATIONS</p><h2 id="mission-heading">Mission workspace</h2></div><button id="mission-refresh" type="button">Refresh missions</button></div>
+          <p class="subtle">Run activity across Command managed nodes. Local desktop activity stays in the AgentUX Desktop cockpit.</p>
+          <div class="mission-filters"><label for="mission-org">Organization</label><select id="mission-org" aria-label="Organization"></select><label for="mission-search">Find a run</label><input id="mission-search" type="search" placeholder="Mission, run, node…" /><span id="mission-stream" class="stream-state" role="status" aria-live="polite">Loading</span></div>
+          <p id="mission-state" class="mission-state" role="status" aria-live="polite">Loading runs…</p>
+        </section>
+        <div class="mission-layout">
+          <section class="panel run-list-panel" aria-labelledby="runs-heading"><div class="panel-heading"><div><p class="eyebrow">RUNS</p><h2 id="runs-heading">Organization runs</h2></div><span id="run-count" class="subtle"></span></div><div id="mission-runs" class="mission-runs" aria-live="polite"></div><p id="runs-empty" class="empty" hidden>No runs found for this organization.</p><p id="runs-more" class="subtle" hidden></p><button id="run-load-more" type="button" hidden>Show more runs</button></section>
+          <div class="mission-detail">
+            <section class="panel" id="run-summary" aria-labelledby="run-title"><p class="eyebrow">SELECT A RUN</p><h2 id="run-title">Run details</h2><p id="run-description" class="subtle">Choose a run to inspect its steps, approvals, artifacts and activity.</p><div id="run-steps" class="run-steps"></div><button id="run-cancel" type="button" class="danger-button" hidden>Cancel run</button></section>
+            <section class="panel" aria-labelledby="activity-heading"><div class="panel-heading"><div><p class="eyebrow">DURABLE ACTIVITY</p><h2 id="activity-heading">Run timeline</h2></div><span id="activity-count" class="subtle"></span></div><p id="activity-notice" class="inline-warning" role="status" hidden></p><ol id="mission-activity" class="mission-activity"></ol><p id="activity-empty" class="empty">Select a run to load its activity.</p></section>
+            <div class="context-grid"><section class="panel" aria-labelledby="approval-heading"><p class="eyebrow">DECISIONS</p><h2 id="approval-heading">Approvals</h2><div id="mission-approvals"></div></section><section class="panel" aria-labelledby="artifact-heading"><p class="eyebrow">RESULTS</p><h2 id="artifact-heading">Artifacts</h2><div id="mission-artifacts"></div></section><section class="panel" aria-labelledby="node-heading"><p class="eyebrow">NODE CONTEXT</p><h2 id="node-heading">Assigned node</h2><div id="mission-node"><p class="subtle">Node information appears with a selected run.</p></div></section></div>
+          </div>
+        </div>
       </section>
       </div>
     </main>

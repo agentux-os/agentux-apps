@@ -25,6 +25,36 @@ The first application is the remote AgentUX Command experience. It includes Agen
 
 `apps/command` is the fleet console for operators: every node with its state, agents (signed in, versions, plan usage, usage limits), spending and runs; per node, test an agent, lift a limit, cancel a run or answer an approval; for several nodes at once, test an agent, lift a limit or push agent preferences (held at each node for someone there unless its policy allows it). It issues enrollment tokens, with ready provision files for new VMs, and approves or revokes enrolled nodes. `npm run serve:command` serves fixture data locally on port 4174. The production path serves the released bundle at `/console/` from Command, on the same origin as its OIDC session; the browser never receives a shared service token. Command must pin the Console release before that route is available in its published image.
 
+### Mission workspace
+
+The Command Console's **Missions** workspace is the remote operator view for
+organization runs coordinated across enrolled nodes. It is separate from the
+single-machine, local cockpit in `agentux-desktop`; Office remains the
+organization-wide overview. The workspace reads Command's organization run
+list and run detail APIs, replays the existing organization event log from a
+run's creation time, and follows `/v1/organizations/<org>/events/stream` from
+the returned durable cursor. EventSource resumes with Command's
+`Last-Event-ID`; duplicate event IDs are ignored and timeline rows follow the
+event log cursor.
+
+Run and step states, attempt numbers, node assignments, approval requests,
+decisions, and artifacts come from current run records, Office projections,
+and current run/step/approval/session events. Unknown event types remain
+readable and can be given a typed renderer in `apps/command/mission.js` when
+the Protocol activity contract is available. Approval decisions use the
+operator's `approval.decide` grant and Command's organization-scoped,
+idempotent resolution API. Cancellation uses `node.command`; stale projections
+disable it, and the UI says when Command cannot confirm delivery to a
+disconnected node. No pause/resume, free-form chat, delegation, or synthetic
+task payloads are presented.
+
+The workspace states whether the stream is live, reconnecting, stale,
+unavailable, or offline. It limits the initial run list rendering and supports
+search, with node, approval, and artifact context kept alongside the selected
+run. Command currently returns at most 200 runs per organization and provides
+no pagination parameter for that endpoint; older runs therefore cannot be
+loaded by the current API.
+
 ## Releases and CI, per app
 
 Each app has its own version (`apps/<app>/VERSION`), CI and release:
