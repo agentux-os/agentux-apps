@@ -68,16 +68,23 @@ const startConnected = () => new Promise((resolve) => {
     if (request.url.startsWith('/v1/')) {
       const controller = new AbortController();
       response.on('close', () => controller.abort());
-      const upstream = await fetch(`http://127.0.0.1:${command.address().port}${request.url}`, {
-        method: request.method,
-        headers: { accept: request.headers.accept || 'application/json', ...(request.headers['content-type'] ? { 'content-type': request.headers['content-type'] } : {}) },
-        signal: controller.signal,
-        ...(request.method === 'GET' || request.method === 'HEAD' ? {} : { body: request, duplex: 'half' })
-      });
-      response.writeHead(upstream.status, { 'content-type': upstream.headers.get('content-type') || 'application/json' });
-      if (!upstream.body) return response.end();
-      for await (const chunk of upstream.body) response.write(chunk);
-      response.end();
+      try {
+        const upstream = await fetch(`http://127.0.0.1:${command.address().port}${request.url}`, {
+          method: request.method,
+          headers: { accept: request.headers.accept || 'application/json', ...(request.headers['content-type'] ? { 'content-type': request.headers['content-type'] } : {}) },
+          signal: controller.signal,
+          ...(request.method === 'GET' || request.method === 'HEAD' ? {} : { body: request, duplex: 'half' })
+        });
+        response.writeHead(upstream.status, { 'content-type': upstream.headers.get('content-type') || 'application/json' });
+        if (!upstream.body) return response.end();
+        for await (const chunk of upstream.body) response.write(chunk);
+        response.end();
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          response.writeHead(502, { 'content-type': 'application/json' });
+          response.end(JSON.stringify({ error: error.message }));
+        }
+      }
       return;
     }
     const requested = request.url === '/' ? '/index.html' : decodeURIComponent(request.url.split('?')[0]);
