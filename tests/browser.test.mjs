@@ -10,6 +10,7 @@ import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { after, before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { extname, join, normalize } from 'node:path';
 import { chromium } from 'playwright';
 
 const axe = await readFile(fileURLToPath(new URL('../node_modules/axe-core/axe.min.js', import.meta.url)), 'utf8');
@@ -49,21 +50,58 @@ const command = createServer((request, response) => {
 
 let browser;
 const servers = [];
+const officeRoot = fileURLToPath(new URL('../apps/office/', import.meta.url));
+const contentTypes = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 const start = (env) => new Promise((resolve) => {
   const port = 42000 + Math.floor(Math.random() * 2000);
   const child = spawn(process.execPath, [fileURLToPath(new URL('../scripts/serve-office.mjs', import.meta.url))], { env: { ...process.env, PORT: String(port), ...env }, stdio: ['ignore', 'pipe', 'inherit'] });
   servers.push(child);
   child.stdout.once('data', () => resolve(`http://127.0.0.1:${port}`));
 });
+const startConnected = () => new Promise((resolve) => {
+  const server = createServer(async (request, response) => {
+    if (request.url === '/config.js') {
+      response.writeHead(200, { 'content-type': 'text/javascript', 'cache-control': 'no-store' });
+      response.end('globalThis.AGENTUX_OFFICE_CONFIG = { command: true, organizationId: "acme", signIn: true };');
+      return;
+    }
+    if (request.url.startsWith('/v1/')) {
+      const controller = new AbortController();
+      response.on('close', () => controller.abort());
+      const upstream = await fetch(`http://127.0.0.1:${command.address().port}${request.url}`, {
+        method: request.method,
+        headers: { accept: request.headers.accept || 'application/json', ...(request.headers['content-type'] ? { 'content-type': request.headers['content-type'] } : {}) },
+        signal: controller.signal,
+        ...(request.method === 'GET' || request.method === 'HEAD' ? {} : { body: request, duplex: 'half' })
+      });
+      response.writeHead(upstream.status, { 'content-type': upstream.headers.get('content-type') || 'application/json' });
+      if (!upstream.body) return response.end();
+      for await (const chunk of upstream.body) response.write(chunk);
+      response.end();
+      return;
+    }
+    const requested = request.url === '/' ? '/index.html' : decodeURIComponent(request.url.split('?')[0]);
+    const path = normalize(join(officeRoot, requested));
+    if (!path.startsWith(officeRoot)) return response.writeHead(403).end('forbidden');
+    try {
+      response.writeHead(200, { 'content-type': contentTypes[extname(path)] || 'text/plain' });
+      response.end(await readFile(path));
+    } catch {
+      response.writeHead(404).end('not found');
+    }
+  });
+  servers.push(server);
+  server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`));
+});
 let demo, live;
 
 before(async () => {
   await new Promise((resolve) => command.listen(0, '127.0.0.1', resolve));
   demo = await start({});
-  live = await start({ COMMAND_URL: `http://127.0.0.1:${command.address().port}`, COMMAND_ORGANIZATION: 'acme' });
+  live = await startConnected();
   browser = await chromium.launch();
 });
-after(async () => { await browser?.close(); for (const s of servers) s.kill(); command.close(); });
+after(async () => { await browser?.close(); for (const s of servers) s.kill ? s.kill() : s.close(); command.close(); });
 
 async function page(url, options = {}) {
   const context = await browser.newContext({ locale: 'en-US', ...options });
