@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { agentsOf, commandMany, createCommandApi, createFixtureApi, limitsOf, nodeState, summarize } from './api.js';
 
-// The real API: requests, auth header and the node's errors.
+// The real API: same-origin session requests and the node's errors.
 const calls = [];
 const fetchImpl = async (url, options) => {
   calls.push({ url, options });
@@ -15,12 +15,13 @@ const fetchImpl = async (url, options) => {
   if (url.endsWith('/v1/enrollments')) return { ok: true, status: 200, json: async () => ({ nodes: [{ nodeId: 'node-a', approved: false }] }) };
   return { ok: false, status: 503, json: async () => ({ error: 'the node is not connected' }) };
 };
-const api = createCommandApi({ baseUrl: 'https://command.acme.org/', token: 'leader', fetchImpl });
+const api = createCommandApi({ fetchImpl });
 
 const listed = await api.command('node-a', 'harness.list');
 assert.deepEqual(listed, { ok: true, nodeId: 'node-a', commandId: 'c1', result: { listed: true } });
-assert.equal(calls[0].url, 'https://command.acme.org/v1/nodes/node-a/commands');
-assert.equal(calls[0].options.headers.Authorization, 'Bearer leader');
+assert.equal(calls[0].url, '/v1/nodes/node-a/commands');
+assert.equal(calls[0].options.credentials, 'same-origin');
+assert.equal(calls[0].options.headers.Authorization, undefined);
 
 const held = await api.command('node-a', 'preferences.set', { preferences: {} });
 assert.equal(held.held, true);

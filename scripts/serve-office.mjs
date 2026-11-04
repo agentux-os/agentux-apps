@@ -1,56 +1,24 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
-import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 
-// Serves AgentUX Office. With COMMAND_URL it shows that Command's
-// organization (COMMAND_ORGANIZATION, org-demo by default): requests to /v1/
-// go through this server, which adds COMMAND_TOKEN (an operator token with
-// organization.read, and approval.decide to decide), so the token never
-// reaches the browser and the live stream works. Without COMMAND_URL it shows
-// demo data.
+// Development/demo server for AgentUX Office. Production operators use the
+// same-origin /office/ route served by Command with their own OIDC session.
 const root = fileURLToPath(new URL('../apps/office/', import.meta.url));
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
-const commandUrl = (process.env.COMMAND_URL || '').replace(/\/$/, '');
-const token = process.env.COMMAND_TOKEN || '';
-const config = commandUrl ? { command: true, organizationId: process.env.COMMAND_ORGANIZATION || 'org-demo' } : {};
-
-async function proxy(request, response) {
-  const headers = { accept: request.headers.accept || 'application/json' };
-  if (request.headers['content-type']) headers['content-type'] = request.headers['content-type'];
-  // If-Match carries an editor's revision: without it, stale saves would overwrite.
-  for (const name of ['last-event-id', 'if-match']) if (request.headers[name]) headers[name] = request.headers[name];
-  if (token) headers.authorization = `Bearer ${token}`;
-  const body = ['GET', 'HEAD'].includes(request.method) ? undefined : Readable.toWeb(request);
-  const controller = new AbortController();
-  // The browser went away (a closed stream): stop asking Command.
-  response.on('close', () => controller.abort());
-  try {
-    const upstream = await fetch(`${commandUrl}${request.url}`, { method: request.method, headers, body, duplex: 'half', signal: controller.signal });
-    response.writeHead(upstream.status, {
-      'content-type': upstream.headers.get('content-type') || 'application/json',
-      'cache-control': 'no-store',
-      ...(upstream.headers.get('etag') ? { etag: upstream.headers.get('etag') } : {})
-    });
-    if (!upstream.body) return response.end();
-    // Streams pass through as they come (the live event stream).
-    for await (const chunk of upstream.body) response.write(chunk);
-    response.end();
-  } catch (error) {
-    if (response.headersSent) return response.end();
-    response.writeHead(502, { 'content-type': 'application/json' });
-    response.end(JSON.stringify({ error: `Command is unreachable: ${error.message}` }));
-  }
-}
 
 const server = createServer(async (request, response) => {
   if (request.url === '/config.js') {
-    response.writeHead(200, { 'content-type': 'text/javascript' });
-    response.end(`globalThis.AGENTUX_OFFICE_CONFIG = ${JSON.stringify(config)};`);
+    response.writeHead(200, { 'content-type': 'text/javascript', 'cache-control': 'no-store' });
+    response.end('globalThis.AGENTUX_OFFICE_CONFIG = {};');
     return;
   }
-  if (commandUrl && request.url.startsWith('/v1/')) return proxy(request, response);
+  if (request.url.startsWith('/v1/')) {
+    response.writeHead(404, { 'content-type': 'application/json' });
+    response.end(JSON.stringify({ error: 'the demo server does not connect to Command' }));
+    return;
+  }
   const requested = request.url === '/' ? '/index.html' : request.url.split('?')[0];
   const path = normalize(join(root, requested));
   if (!path.startsWith(root)) {
@@ -68,4 +36,4 @@ const server = createServer(async (request, response) => {
 
 const port = Number(process.env.PORT ?? 4173);
 const host = process.env.HOST || '127.0.0.1';
-server.listen(port, host, () => console.log(`Office listening on http://${host}:${port}${commandUrl ? ` (Command: ${commandUrl})` : ' (demo data)'}`));
+server.listen(port, host, () => console.log(`Office demo listening on http://${host}:${port}`));

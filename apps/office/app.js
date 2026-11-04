@@ -53,8 +53,8 @@ const clock = (iso) => { const t = Date.parse(iso); return Number.isNaN(t) ? '' 
 const ago = (iso) => { const s = Math.round((Date.now() - Date.parse(iso)) / 1000); return Number.isNaN(s) ? '?' : s < 60 ? t('time.now') : s < 3600 ? t('time.minutes', { n: Math.round(s / 60) }) : t('time.hours', { n: Math.round(s / 3600) }); };
 
 function apiForRuntime() {
-  // Behind serve-office (COMMAND_URL) or on Command's own origin: same-origin calls.
-  return config.command ? createCommandApi({ baseUrl: config.commandUrl || '', organizationId: config.organizationId || 'org-demo' }) : createFixtureApi({ projection: fixtureProjection });
+  // Production Office is served by Command on the same origin as its session.
+  return config.command ? createCommandApi({ organizationId: config.organizationId || 'org-demo' }) : createFixtureApi({ projection: fixtureProjection });
 }
 
 /** Command's sign-in, coming back to this page (when Command has one). */

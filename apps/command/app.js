@@ -2,10 +2,24 @@ import { agentsOf, commandMany, createCommandApi, createFixtureApi, limitsOf, no
 
 const $ = (id) => document.getElementById(id);
 const config = globalThis.AGENTUX_COMMAND_CONFIG || {};
-const api = config.commandUrl !== undefined || config.token ? createCommandApi({ baseUrl: config.commandUrl || '', token: config.token }) : createFixtureApi();
+const api = config.command ? createCommandApi() : createFixtureApi();
 const selected = new Set();
 const open = new Set();
 let nodes = [];
+
+function setOperator(operator) {
+  const signedIn = Boolean(operator);
+  $('operator-name').textContent = signedIn ? `Signed in as ${operator.subject}` : '';
+  $('sign-in').hidden = signedIn || api.mode !== 'command' || !config.signIn;
+  $('sign-out').hidden = !signedIn;
+  $('auth-required').hidden = signedIn || api.mode !== 'command';
+  $('console-content').hidden = api.mode === 'command' && !signedIn;
+  if (!signedIn && api.mode === 'command') {
+    $('auth-message').textContent = config.signIn
+      ? 'Sign in with your Command account to view and operate your organization.'
+      : 'Operator sign-in is not configured on this Command server.';
+  }
+}
 
 const AGENT_NAMES = { 'claude-code': 'Claude Code', codex: 'Codex', opencode: 'OpenCode', antigravity: 'Antigravity' };
 const STATE_LABEL = { online: 'online', waiting: 'waiting for people', offline: 'offline', pending_approval: 'waiting for approval' };
@@ -85,6 +99,20 @@ function render() {
 
 async function refresh() {
   try {
+    if (api.mode === 'command') {
+      try {
+        setOperator(await api.operator());
+      } catch (error) {
+        if (error.status === 401) {
+          setOperator(null);
+          $('connection-status').textContent = 'sign in required';
+          return;
+        }
+        throw error;
+      }
+    } else {
+      setOperator(null);
+    }
     const [instance, list, enrolled] = await Promise.all([api.instance(), api.nodes(), api.enrollments().catch(() => [])]);
     nodes = list;
     $('instance').textContent = `Command server ${instance.instanceId}${api.mode === 'fixture' ? ' · demo data' : ''}`;
@@ -92,9 +120,22 @@ async function refresh() {
     renderEnrollments(enrolled);
     render();
   } catch (error) {
+    if (api.mode === 'command') {
+      $('auth-required').hidden = false;
+      $('auth-message').textContent = error.message;
+    }
     $('connection-status').textContent = `unavailable: ${error.message}`;
   }
 }
+
+$('sign-out').addEventListener('click', async () => {
+  try {
+    await api.logout();
+    location.assign('/console/');
+  } catch (error) {
+    $('connection-status').textContent = `sign out failed: ${error.message}`;
+  }
+});
 
 function renderEnrollments(list) {
   $('enrollments').innerHTML = list.map((e) => `<li><strong>${escape(e.nodeId)}</strong> <small>${escape(e.organizationId)} · ${e.revokedAt ? 'revoked' : e.approved ? 'approved' : 'waiting for approval'}</small>

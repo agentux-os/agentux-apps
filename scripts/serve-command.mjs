@@ -3,15 +3,14 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Serves the Command console. With COMMAND_URL and COMMAND_TOKEN it talks to
-// a Command server (which must allow this origin); without, it shows demo data.
+// Development-only fixture server for the Command console. Production uses
+// Command's same-origin /console/ route and per-operator OIDC sessions.
 const root = fileURLToPath(new URL('../apps/command/', import.meta.url));
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
-const config = process.env.COMMAND_URL ? { commandUrl: process.env.COMMAND_URL, token: process.env.COMMAND_TOKEN } : {};
 const server = createServer(async (request, response) => {
   if (request.url === '/config.js') {
-    response.writeHead(200, { 'content-type': 'text/javascript' });
-    response.end(`globalThis.AGENTUX_COMMAND_CONFIG = ${JSON.stringify(config)};`);
+    response.writeHead(200, { 'content-type': 'text/javascript', 'cache-control': 'no-store' });
+    response.end('globalThis.AGENTUX_COMMAND_CONFIG = {};');
     return;
   }
   const requested = request.url === '/' ? '/index.html' : request.url;

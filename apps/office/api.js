@@ -35,13 +35,12 @@ function failure(status, body) {
   return { status: 'error', error: body?.error || `Command answered ${status}` };
 }
 
-export function createCommandApi({ baseUrl = '', token, organizationId = 'org-demo', fetchImpl = fetch, EventSourceImpl = globalThis.EventSource }) {
-  const root = baseUrl.replace(/\/$/, '');
+export function createCommandApi({ organizationId = 'org-demo', fetchImpl = fetch, EventSourceImpl = globalThis.EventSource }) {
   const org = encodeURIComponent(organizationId);
-  const request = async (path, options = {}) => fetchImpl(`${root}${path}`, {
+  const request = async (path, options = {}) => fetchImpl(path, {
     credentials: 'same-origin',
     ...options,
-    headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) }
+    headers: { Accept: 'application/json', ...(options.headers || {}) }
   });
 
   return {
@@ -76,7 +75,7 @@ export function createCommandApi({ baseUrl = '', token, organizationId = 'org-de
         const last = events.find((entry) => entry.event?.eventId === projection.lastEventId) || events.at(-1);
         after = last ? last.cursor : 0;
       } catch { /* from the start of what the stream has */ }
-      const source = new EventSourceImpl(`${root}/v1/organizations/${org}/events/stream?after=${after}`, { withCredentials: true });
+      const source = new EventSourceImpl(`/v1/organizations/${org}/events/stream?after=${after}`, { withCredentials: true });
       source.addEventListener('open', () => onState?.('live'));
       source.addEventListener('error', () => onState?.('reconnecting'));
       source.addEventListener('unavailable', () => onState?.('unavailable'));
