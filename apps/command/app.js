@@ -1,4 +1,5 @@
 import { agentsOf, commandMany, createCommandApi, createFixtureApi, limitsOf, nodeState, summarize } from './api.js';
+import { mountMissionWorkspace } from './mission-workspace.js';
 
 const $ = (id) => document.getElementById(id);
 const config = globalThis.AGENTUX_COMMAND_CONFIG || {};
@@ -6,6 +7,8 @@ const api = config.command ? createCommandApi() : createFixtureApi();
 const selected = new Set();
 const open = new Set();
 let nodes = [];
+let operatorGrants = {};
+let missionWorkspace;
 
 function setOperator(operator) {
   const signedIn = Boolean(operator);
@@ -14,12 +17,40 @@ function setOperator(operator) {
   $('sign-out').hidden = !signedIn;
   $('auth-required').hidden = signedIn || api.mode !== 'command';
   $('console-content').hidden = api.mode === 'command' && !signedIn;
+  operatorGrants = Object.fromEntries(Object.entries(operator?.organizations || {}).map(([organization, grants]) => [organization, Array.isArray(grants) ? grants : []]));
+  missionWorkspace?.updateAccess();
   if (!signedIn && api.mode === 'command') {
     $('auth-message').textContent = config.signIn
       ? 'Sign in with your Command account to view and operate your organization.'
       : 'Operator sign-in is not configured on this Command server.';
   }
 }
+
+function switchView(view) {
+  const missions = view === 'missions';
+  $('fleet-view').hidden = missions;
+  $('mission-view').hidden = !missions;
+  document.querySelectorAll('.nav-tab').forEach((button) => button.setAttribute('aria-current', String(button.dataset.view === view)));
+  $('console-title').innerHTML = missions ? 'Missions <span>· remote runs across enrolled nodes</span>' : 'Fleet <span>· nodes and their agents</span>';
+  if (missions) void missionWorkspace.refresh();
+}
+
+missionWorkspace = mountMissionWorkspace({
+  config,
+  getNodes: () => nodes,
+  getGrants: () => operatorGrants,
+  onOpenNode: (nodeId) => {
+    switchView('fleet');
+    open.add(nodeId);
+    render();
+    document.querySelector(`[data-open="${CSS.escape(nodeId)}"]`)?.scrollIntoView({ block: 'center' });
+  }
+});
+
+document.querySelector('.console-nav').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-view]');
+  if (button) switchView(button.dataset.view);
+});
 
 const AGENT_NAMES = { 'claude-code': 'Claude Code', codex: 'Codex', opencode: 'OpenCode', antigravity: 'Antigravity' };
 const STATE_LABEL = { online: 'online', waiting: 'waiting for people', offline: 'offline', pending_approval: 'waiting for approval' };
@@ -115,6 +146,7 @@ async function refresh() {
     }
     const [instance, list, enrolled] = await Promise.all([api.instance(), api.nodes(), api.enrollments().catch(() => [])]);
     nodes = list;
+    missionWorkspace.updateAccess();
     $('instance').textContent = `Command server ${instance.instanceId}${api.mode === 'fixture' ? ' · demo data' : ''}`;
     $('connection-status').textContent = api.mode === 'fixture' ? 'fixture' : 'connected';
     renderEnrollments(enrolled);
